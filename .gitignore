@@ -49,6 +49,7 @@ tmtagsHistory
 # #################
 /data
 *.mid
+*.pkl
 
 # Dev-specific settings #
 # #################

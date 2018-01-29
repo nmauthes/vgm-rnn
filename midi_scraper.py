@@ -26,7 +26,8 @@ def get_midi_files(args):
     try:
         args.url = VGMUSIC_URLS[args.url]
     except KeyError:
-        # You must really enjoy typing...
+        # Use the shortcuts, it's quicker
+        # Unless you really enjoy typing...
         pass
 
     source = requests.get(args.url).text  # TODO try/except
@@ -40,7 +41,7 @@ def get_midi_files(args):
 
     print(f'Found {len(links)} MIDI files at {args.url}')
 
-    errors = 0
+    errors = 0 # TODO Check this?
     for i, link in enumerate(links[:args.max_files]):
         print(f'Downloading file {i + 1} of {len(links) if args.max_files >= len(links) else args.max_files}')
 
