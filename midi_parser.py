@@ -25,23 +25,17 @@ def filter_midi_files(data_folder, allowed_time_sigs, allowed_keys, max_time_cha
     for num, midi_file in enumerate(midi_files):
         print(f'Processing file {num + 1} of {len(midi_files)}')
 
-        try:
+        try: # TODO check logic
             mid = pretty_midi.PrettyMIDI(os.path.join(data_folder, midi_file)) # Try/except
 
             if not ignore_filters:
-                time_sig_is_good, key_is_good = True, True # Assume the MIDI file is innocent until proven guilty
+                time_sig_is_good, key_is_good = False, False
 
                 if mid.time_signature_changes and len(mid.time_signature_changes) <= max_time_changes:
-                    for time_sig in mid.time_signature_changes:
-                        if time_sig not in allowed_time_sigs:
-                            time_sig_is_good = False
-                            break  # File contains a forbidden time signature
+                    time_sig_is_good = all(f'{ts.numerator}/{ts.denominator}' in allowed_time_sigs for ts in mid.time_signature_changes)
 
                 if mid.key_signature_changes and len(mid.key_signature_changes) <= max_key_changes:
-                    for key in mid.key_signature_changes:
-                        if key not in allowed_keys:
-                            key_is_good = False
-                            break  # File contains a forbidden key signature
+                    key_is_good = all(pretty_midi.key_number_to_key_name(key.key_number) in allowed_keys for key in mid.key_signature_changes)
 
                 if time_sig_is_good and key_is_good:
                     filtered_files.append(mid)
@@ -51,7 +45,7 @@ def filter_midi_files(data_folder, allowed_time_sigs, allowed_keys, max_time_cha
         except:
             errors += 1
 
-    print(f'{len(midi_files)} MIDI files found.')
+    print(f'{len(filtered_files)} MIDI files found.')
 
     if errors:
         print(f'{errors} files could not be parsed')
