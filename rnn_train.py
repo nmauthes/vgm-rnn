@@ -23,7 +23,6 @@ ALLOWED_KEYS = ['Db Major', 'D Major', 'Eb Major', 'E Major', 'F Major', 'Gb Maj
 if os.path.exists('training_data.pkl'):
     with open('training_data.pkl', 'rb') as f:
         midis = pickle.load(f)
-        midis[0].write('test_2.mid')
 
 else:
-    midis = filter_midi_files('nes_data', ALLOWED_TIME_SIGS, ALLOWED_KEYS)
+    midis = filter_midi_files('nes_data', ALLOWED_TIME_SIGS, ALLOWED_KEYS, pickle_result=True)
