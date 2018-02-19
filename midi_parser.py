@@ -67,9 +67,6 @@ def filter_midi_files(data_folder, allowed_time_sigs, allowed_keys, max_time_cha
 
 
 def pretty_midi_to_numpy_array(midi_data, subdivision=4, use_velocity=False, transpose_notes=False, ignore_drums=True):
-    if use_velocity:
-        raise Exception('This hasn\'t been implemented yet :)')
-
     if subdivision not in ALLOWED_SUBDIVISIONS:
         raise MIDIError("That subdivision is not allowed!")
 
@@ -85,7 +82,7 @@ def pretty_midi_to_numpy_array(midi_data, subdivision=4, use_velocity=False, tra
     if step_size == 0:
         raise MIDIError('The step size is too small (try decreasing the subdivision)')
 
-    piano_roll = np.zeros((128, int(round(total_ticks / step_size)) + 1), dtype=np.int)
+    piano_roll = np.zeros((128, int(round(total_ticks / step_size)) + 1, 2), dtype=np.int)
 
     for inst in midi_data.instruments:
         if ignore_drums and inst.is_drum:
@@ -93,16 +90,15 @@ def pretty_midi_to_numpy_array(midi_data, subdivision=4, use_velocity=False, tra
 
         # TODO Logic for sustained notes
         for note in inst.notes:  # Notes that don't fall exactly on the grid are quantized to the nearest subdivision
-            piano_roll[note.pitch,
-                       int(round(midi_data.time_to_tick(note.start) / step_size))] = note.velocity if use_velocity else 1
+            note_start = int(round(midi_data.time_to_tick(note.start) / step_size))
+            duration = int(round(midi_data.time_to_tick(note.end - note.start) / step_size))
+
+            piano_roll[note.pitch, note_start] = [note.velocity, duration] if use_velocity else [1, duration]
 
     return piano_roll
 
 
 def numpy_array_to_pretty_midi(arr, subdivision=4, use_velocity=False, program=81, tempo=120, resolution=480):
-    if use_velocity:
-        raise Exception('This hasn\'t been implemented yet :)')
-
     if subdivision not in ALLOWED_SUBDIVISIONS:
         raise MIDIError("That subdivision is not allowed!")
 
@@ -113,11 +109,14 @@ def numpy_array_to_pretty_midi(arr, subdivision=4, use_velocity=False, program=8
     inst = pretty_midi.Instrument(program=program, is_drum=False)
     mid.instruments.append(inst)
 
-    for i, vel in np.ndenumerate(arr):
+    for pitch, time in np.ndindex(arr.shape[0], arr.shape[1]):
+        (vel, dur) = arr[pitch][time][0], arr[pitch][time][1]
+
         if vel:
-            note_start = i[1] * step_size
-            note = pretty_midi.Note(velocity=vel if use_velocity else DEFAULT_VELOCITY, pitch=i[0],
-                                    start=mid.tick_to_time(note_start), end=mid.tick_to_time(note_start + step_size))
+            note_start = time * step_size
+            note = pretty_midi.Note(velocity=vel if use_velocity else DEFAULT_VELOCITY, pitch=pitch,
+                                    start=mid.tick_to_time(note_start),
+                                    end=mid.tick_to_time(int(note_start + step_size * dur)))
 
             mid.instruments[0].notes.append(note)
 
