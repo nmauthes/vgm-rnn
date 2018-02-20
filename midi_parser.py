@@ -34,7 +34,7 @@ def filter_midi_files(data_folder, allowed_time_sigs, allowed_keys, max_time_cha
         print(f'Processing file {num + 1} of {len(midi_files)}')
 
         try:
-            mid = pretty_midi.PrettyMIDI(os.path.join(data_folder, midi_file)) # Try/except
+            mid = pretty_midi.PrettyMIDI(os.path.join(data_folder, midi_file))
 
             if not ignore_filters:
                 time_sig_is_good, key_is_good = False, False
@@ -88,7 +88,6 @@ def pretty_midi_to_numpy_array(midi_data, subdivision=4, use_velocity=False, tra
         if ignore_drums and inst.is_drum:
             continue
 
-        # TODO Logic for sustained notes
         for note in inst.notes:  # Notes that don't fall exactly on the grid are quantized to the nearest subdivision
             note_start = int(round(midi_data.time_to_tick(note.start) / step_size))
             duration = int(round(midi_data.time_to_tick(note.end - note.start) / step_size))
@@ -123,12 +122,19 @@ def numpy_array_to_pretty_midi(arr, subdivision=4, use_velocity=False, program=8
     return mid
 
 
-def midi_file_to_pretty_midi(midi_data):
-    if isinstance(midi_data, pretty_midi.PrettyMIDI):
-        return midi_data
+def midi_file_to_pretty_midi(midi_file):
+    '''
+    Simple function for converting a raw MIDI file into pretty_midi format.
+
+    :param midi_file: The MIDI file to be converted
+    :return: A pretty_midi object
+    '''
+
+    if isinstance(midi_file, pretty_midi.PrettyMIDI):
+        return midi_file
 
     try:
-        mid = pretty_midi.PrettyMIDI(midi_data)
+        mid = pretty_midi.PrettyMIDI(midi_file)
     except:
         raise MIDIError('Bad MIDI file!')
 
@@ -136,6 +142,14 @@ def midi_file_to_pretty_midi(midi_data):
 
 
 def transpose(midi_data, semitones):
+    '''
+    Transposes all the notes in a pretty_midi object by the specified number of semitones.
+    Any drum instruments in the object will not be modified.
+
+    :param midi_data: The pretty_midi object to be transposed
+    :param semitones: The number semitones to transpose the notes up (positive) or down (negative)
+    '''
+
     for inst in midi_data.instruments:
         if not inst.is_drum: # Don't transpose drum tracks
             for note in inst.notes:
@@ -143,6 +157,14 @@ def transpose(midi_data, semitones):
 
 
 def transpose_to_c(midi_data):
+    '''
+    A special case of transpose that moves all notes to the key of C (major or minor)
+    Note that in order to know the how many semitones to transpose, the original key (i.e. key_signature_changes[0]
+    must be present. Otherwise an exception will be thrown.
+
+    :param midi_data: The pretty_midi object to be transposed
+    '''
+
     if midi_data.key_signature_changes:
         key = midi_data.key_signature_changes[0]
     else:
@@ -153,15 +175,12 @@ def transpose_to_c(midi_data):
     if not pos_in_octave == 0:
         semitones = -pos_in_octave if pos_in_octave < 6 else 12 - pos_in_octave # Transpose up or down given dist from C
 
-        for inst in midi_data.instruments:
-            if not inst.is_drum: # Don't transpose drum tracks
-                for note in inst.notes:
-                    note.pitch += semitones
+        transpose(midi_data, semitones)
 
 
 def split_drums(midi_data):
     '''
-    Split a pretty_midi into two separate objects, one containing only the drum parts,
+    Splits a pretty_midi into two separate objects, one containing only the drum parts,
     and one containing all the other parts.
 
     :param midi_data: The pretty_midi object to be split

@@ -10,7 +10,7 @@ import pickle
 import numpy as np
 import pretty_midi
 
-from midi_parser import MIDIError, filter_midi_files, pretty_midi_to_numpy_array
+from midi_parser import MIDIError, filter_midi_files, pretty_midi_to_numpy_array, numpy_array_to_pretty_midi
 
 
 ALLOWED_TIME_SIGS = ['4/4']
@@ -34,6 +34,8 @@ if os.path.exists('training_data.pkl'):
             print(f'Processing {i + 1} of {len(midis)}')
             try:
                 arr = pretty_midi_to_numpy_array(mid, subdivision=SUBDIVISION, transpose_notes=True)
+                # new_mid = numpy_array_to_pretty_midi(arr, subdivision=SUBDIVISION)
+                # new_mid.write(f'test/mid_{i}.mid')
             except MIDIError as e:
                 print(f'Error! {e}')
 
