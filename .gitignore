@@ -51,6 +51,7 @@ tmtagsHistory
 *.mid
 *.pkl
 *.txt
+!requirements.txt
 
 # Dev-specific settings #
 # #################

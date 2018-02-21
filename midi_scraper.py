@@ -30,7 +30,7 @@ def get_midi_files(args):
         # Unless you really enjoy typing...
         pass
 
-    source = requests.get(args.url).text  # TODO try/except
+    source = requests.get(args.url).text  # TODO try/except for timeout error
     soup = BeautifulSoup(source, 'lxml')
 
     links = soup.find_all('a', href=True)
