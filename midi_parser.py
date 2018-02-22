@@ -1,8 +1,9 @@
-# TODO Add docstrings
-
 '''
 
-Utilities for parsing, modifying and filtering MIDI files.
+Utilities for parsing, modifying and filtering MIDI files. Also contains functions for converting from pretty_midi
+to numpy array and vice versa.
+
+:authors Nicolas Mauthes
 
 '''
 
@@ -22,9 +23,24 @@ class MIDIError(Exception):
     pass
 
 
-# TODO Allow for multiple data folders?
 def filter_midi_files(data_folder, allowed_time_sigs, allowed_keys, max_time_changes=1, max_key_changes=1,
                       ignore_filters=False, pickle_result=False, path='training_data.pkl'):
+    '''
+    A function to filter a group of MIDI files by selecting only the ones that meet the specified criteria
+    supplied for key, time signature, etc (e.g. only files in the key of C major with a 4/4 time signature).
+    The files are returned as a list of pretty_midi objects. Note that the pickled file can get quite large
+    when pickle_result is true.
+
+    :param data_folder: The path of the folder containing the files to be filtered
+    :param allowed_time_sigs: The time signatures to be allowed as an array of strings e.g. ['4/4', '3/4']
+    :param allowed_keys: The key signatures to be allowed as an array of strings e.g. ['C Major', 'Bb Minor']
+    :param max_time_changes: The maximum number of time signature changes allowed. Default is 1.
+    :param max_key_changes: The maximum number of key signature changes allowed. Default is 1.
+    :param ignore_filters: If true, all MIDI files in the folder will be converted regardless of filter settings
+    :param pickle_result: If true, the resulting list of pretty_midi objects will be saved as a .pkl file
+    :param path: The path where the .pkl file will be saved
+    :return: A list of pretty_midi objects meeting the supplied filter settings
+    '''
 
     midi_files = os.listdir(data_folder)
 
@@ -66,7 +82,23 @@ def filter_midi_files(data_folder, allowed_time_sigs, allowed_keys, max_time_cha
     return filtered_files
 
 
-def pretty_midi_to_numpy_array(midi_data, subdivision=4, use_velocity=False, transpose_notes=False, ignore_drums=True):
+def pretty_midi_to_numpy_array(midi_data, subdivision=4, max_duration=16, use_velocity=False, transpose_notes=False,
+                               ignore_drums=True):
+    '''
+    Encodes a pretty_midi object into an array with shape (127, t, 2) where the first axis is MIDI pitch, t is
+    the number of timesteps in the song, and the last axis is a pair [v, d] where v is the note's velocity (unless
+    use_velocity is false) and d is its duration in number of timesteps.
+
+    :param midi_data: The pretty_midi object to be encoded
+    :param subdivision: The resolution at which to sample notes in the song where subdivision is the number of steps
+    per quarter note(e.g. for subdivision=4, 1/subdivision represents a 16th note)
+    :param max_duration: The maximum duration (number of steps) an encoded note can have. Default is 16.
+    :param use_velocity: If true, velocity of the note is used for v (above), otherwise binary values where 1=on 0=off
+    :param transpose_notes: If true, the notes will be transposed to C before encoding (key signature must be present)
+    :param ignore_drums: If true, skips all drum instruments (i.e. where is_drum=True) in the song
+    :return: A numpy array of shape (127, t, 2) encoding the notes in the pretty_midi object
+    '''
+
     if subdivision not in ALLOWED_SUBDIVISIONS:
         raise MIDIError("That subdivision is not allowed!")
 
@@ -92,12 +124,29 @@ def pretty_midi_to_numpy_array(midi_data, subdivision=4, use_velocity=False, tra
             note_start = int(round(midi_data.time_to_tick(note.start) / step_size))
             duration = int(round(midi_data.time_to_tick(note.end - note.start) / step_size))
 
+            if duration > max_duration:
+                duration = max_duration
+
             piano_roll[note.pitch, note_start] = [note.velocity, duration] if use_velocity else [1, duration]
 
     return piano_roll
 
 
 def numpy_array_to_pretty_midi(arr, subdivision=4, use_velocity=False, program=81, tempo=120, resolution=480):
+    '''
+    Decodes an array created using pretty_midi_to_numpy_array() and returns a pretty_midi object.
+
+    :param arr: The numpy array to be decoded
+    :param subdivision: The number of steps per quarter note. It is important that this has the same value as when
+    the array was created in order to make sure note lengths are consistent.
+    :param use_velocity: Whether or not velocity was used to encode the notes in the array. Should be the same as
+    when created.
+    :param program: The MIDI program number to use for playback. Default is 81 (Lead 1 (Square))
+    :param tempo: The tempo of the pretty_midi object in BPM. Default is 120.
+    :param resolution: The resolution of the pretty_midi object (i.e. ticks per quarter note)
+    :return: A pretty_midi object based on the contents of the numpy array
+    '''
+
     if subdivision not in ALLOWED_SUBDIVISIONS:
         raise MIDIError("That subdivision is not allowed!")
 

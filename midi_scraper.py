@@ -30,7 +30,7 @@ def get_midi_files(args):
         # Unless you really enjoy typing...
         pass
 
-    source = requests.get(args.url).text  # TODO try/except for timeout error
+    source = requests.get(args.url).text  # TODO try/except
     soup = BeautifulSoup(source, 'lxml')
 
     links = soup.find_all('a', href=True)
@@ -52,7 +52,7 @@ def get_midi_files(args):
             errors += 1
 
     if errors:
-        print('{errors} errors occurred')
+        print(f'{errors} errors occurred')
 
 parser = argparse.ArgumentParser(
     description='Utility for scraping MIDI files from VGMusic.com',
