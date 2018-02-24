@@ -51,6 +51,7 @@ tmtagsHistory
 *.mid
 *.pkl
 *.txt
+*.npy
 !requirements.txt
 
 # Dev-specific settings #
