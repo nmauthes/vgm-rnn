@@ -6,13 +6,14 @@ Train the RNN on a collection of MIDI files.
 
 import os
 import argparse
-import pickle
 
 import numpy as np
-import pretty_midi
 
 from midi_parser import MIDIError, filter_midi_files, pretty_midi_to_numpy_array
 
+
+DATA_FOLDERS = ['test']
+TRAINING_DATA_PATH = 'training_data.npy'
 
 ALLOWED_TIME_SIGS = ['4/4']
 
@@ -28,19 +29,24 @@ SUBDIVISION = 8
 MAX_DURATION = SUBDIVISION * 4 # Corresponds to 1 whole note
 
 
-# Test code
-if os.path.exists('training_data.pkl'):
-    with open('training_data.pkl', 'rb') as f:
-        midis = pickle.load(f)
+if __name__ == '__main__':
+    training_data = np.empty(shape=(128, 0, 2))
 
-        for i, mid in enumerate(midis):
-            print(f'Processing {i + 1} of {len(midis)}')
-            try:
-                arr = pretty_midi_to_numpy_array(mid, subdivision=SUBDIVISION, transpose_notes=True)
-                # new_mid = numpy_array_to_pretty_midi(arr, subdivision=SUBDIVISION)
-                # new_mid.write(f'test/mid_{i}.mid')
-            except MIDIError as e:
-                print(f'Error! {e}')
+    errors = 0
+    for i, folder in enumerate(DATA_FOLDERS):
+        print(f'Processing folder \'{folder}\' ({i + 1}/{len(DATA_FOLDERS)})')
 
-else:
-    midis = filter_midi_files('nes_data', ALLOWED_TIME_SIGS, ALLOWED_KEYS, pickle_result=True)
+        if os.path.exists(folder):
+            midis = filter_midi_files(folder, ALLOWED_TIME_SIGS, ALLOWED_KEYS)
+
+            for mid in midis:
+                try:
+                    arr = pretty_midi_to_numpy_array(mid, subdivision=SUBDIVISION, transpose_notes=True)
+                    training_data = np.concatenate((training_data,arr), axis=1)
+                except MIDIError:
+                    errors += 1
+
+        else:
+            raise Exception('Data folder not found!')
+
+        np.save(TRAINING_DATA_PATH, training_data)

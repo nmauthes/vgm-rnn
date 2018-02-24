@@ -85,7 +85,7 @@ def filter_midi_files(data_folder, allowed_time_sigs, allowed_keys, max_time_cha
 def pretty_midi_to_numpy_array(midi_data, subdivision=4, max_duration=16, use_velocity=False, transpose_notes=False,
                                ignore_drums=True):
     '''
-    Encodes a pretty_midi object into an array with shape (127, t, 2) where the first axis is MIDI pitch, t is
+    Encodes a pretty_midi object into an array with shape (128, t, 2) where the first axis is MIDI pitch, t is
     the number of timesteps in the song, and the last axis is a pair [v, d] where v is the note's velocity (unless
     use_velocity is false) and d is its duration in number of timesteps.
 
@@ -96,11 +96,11 @@ def pretty_midi_to_numpy_array(midi_data, subdivision=4, max_duration=16, use_ve
     :param use_velocity: If true, velocity of the note is used for v (above), otherwise binary values where 1=on 0=off
     :param transpose_notes: If true, the notes will be transposed to C before encoding (key signature must be present)
     :param ignore_drums: If true, skips all drum instruments (i.e. where is_drum=True) in the song
-    :return: A numpy array of shape (127, t, 2) encoding the notes in the pretty_midi object
+    :return: A numpy array of shape (128, t, 2) encoding the notes in the pretty_midi object
     '''
 
     if subdivision not in ALLOWED_SUBDIVISIONS:
-        raise MIDIError("That subdivision is not allowed!")
+        raise Exception("That subdivision is not allowed!")
 
     if transpose_notes:
         try:
@@ -148,7 +148,7 @@ def numpy_array_to_pretty_midi(arr, subdivision=4, use_velocity=False, program=8
     '''
 
     if subdivision not in ALLOWED_SUBDIVISIONS:
-        raise MIDIError("That subdivision is not allowed!")
+        raise Exception("That subdivision is not allowed!")
 
     step_size = resolution // subdivision
 
