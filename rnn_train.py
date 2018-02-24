@@ -8,8 +8,9 @@ import os
 import argparse
 
 import numpy as np
+import pretty_midi
 
-from midi_parser import MIDIError, filter_midi_files, pretty_midi_to_numpy_array
+from midi_parser import MIDIError, filter_midi_files, pretty_midi_to_numpy_array, numpy_array_to_pretty_midi
 
 
 DATA_FOLDERS = ['test']
@@ -52,6 +53,3 @@ if __name__ == '__main__':
                 raise Exception('Data folder not found!')
 
             np.save(TRAINING_DATA_PATH, training_data) # Serialize array of training data for future use
-
-    print(training_data.shape)
-
