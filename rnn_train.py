@@ -13,7 +13,7 @@ import pretty_midi
 from midi_parser import MIDIError, filter_midi_files, pretty_midi_to_numpy_array, numpy_array_to_pretty_midi
 
 
-DATA_FOLDERS = ['test']
+DATA_FOLDERS = ['nes_data']
 TRAINING_DATA_PATH = 'training_data.npy'
 
 ALLOWED_TIME_SIGS = ['4/4']
@@ -52,4 +52,4 @@ if __name__ == '__main__':
             else:
                 raise Exception('Data folder not found!')
 
-            np.save(TRAINING_DATA_PATH, training_data) # Serialize array of training data for future use
+            np.save(TRAINING_DATA_PATH, training_data) # Serialize array containing training data for future use
