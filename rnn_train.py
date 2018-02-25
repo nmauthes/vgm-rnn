@@ -8,7 +8,6 @@ import os
 import argparse
 
 import numpy as np
-import pretty_midi
 
 from midi_parser import MIDIError, filter_midi_files, pretty_midi_to_numpy_array, numpy_array_to_pretty_midi
 
