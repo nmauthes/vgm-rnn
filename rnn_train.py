@@ -8,8 +8,10 @@ import os
 import argparse
 
 import numpy as np
-
-import keras
+from keras.models import Sequential
+from keras.layers import Dense, Activation, Dropout
+from keras.layers import LSTM
+from keras.optimizers import RMSprop
 
 from midi_parser import MIDIError, filter_midi_files, pretty_midi_to_numpy_array
 
@@ -25,7 +27,6 @@ ALLOWED_TIME_SIGS = ['4/4']
 ALLOWED_KEYS = ['Db Major', 'D Major', 'Eb Major', 'E Major', 'F Major', 'Gb Major', 'G Major',
                 'Ab Major', 'A Major', 'Bb Major', 'B Major', 'C minor', 'C# minor', 'D minor', 'Eb minor',
                 'E minor', 'F minor', 'F# minor', 'G minor', 'G# minor', 'A minor', 'Bb minor', 'B minor']
-
 
 SUBDIVISION = 8
 MAX_DURATION = SUBDIVISION * 4 # Corresponds to 1 whole note
@@ -56,3 +57,9 @@ if __name__ == '__main__':
                 raise Exception('Data folder not found!')
 
             np.save(TRAINING_DATA_PATH, training_data) # Serialize array containing training data for future use
+
+    model = Sequential()
+    #model.add(LSTM(128, input_shape=(training_data.shape[1], 2))
+
+
+
