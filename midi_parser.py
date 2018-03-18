@@ -19,13 +19,14 @@ import numpy as np
 ALLOWED_SUBDIVISIONS = [1, 2, 4, 8]
 DEFAULT_VELOCITY = 110
 
+PICKLED_MIDI_PATH = 'training_data.pkl'
 
 class MIDIError(Exception):
     pass
 
 
 def filter_midi_files(data_folder, allowed_time_sigs, allowed_keys, max_time_changes=1, max_key_changes=1,
-                      ignore_filters=False, pickle_result=False, path='training_data.pkl'):
+                      ignore_filters=False, pickle_result=False, path=PICKLED_MIDI_PATH):
     '''
     A function to filter a group of MIDI files by selecting only the ones that meet the specified criteria
     supplied for key, time signature, etc (e.g. only files in the key of C major with a 4/4 time signature).
@@ -121,7 +122,7 @@ def pretty_midi_to_piano_roll(midi_data, subdivision=4, max_duration=16, sensiti
     end_ticks = midi_data.time_to_tick(midi_data.get_end_time())
     num_measures = math.ceil(end_ticks / (midi_data.resolution * 4)) # Assumes 4/4 time
 
-    piano_roll = np.zeros((128, num_measures * subdivision * 4), dtype=np.int)
+    piano_roll = np.zeros((num_measures * subdivision * 4, 128), dtype=np.int)
 
     for inst in midi_data.instruments:
         if ignore_drums and inst.is_drum:
@@ -145,16 +146,16 @@ def pretty_midi_to_piano_roll(midi_data, subdivision=4, max_duration=16, sensiti
                 if duration > max_duration:
                     duration = max_duration
 
-                piano_roll[note.pitch, note_start] = duration
+                piano_roll[note_start, note.pitch] = duration
 
     return piano_roll
 
 
-def piano_roll_to_pretty_midi(arr, subdivision=4, program=81, tempo=120, resolution=480):
+def piano_roll_to_pretty_midi(piano_roll, subdivision=4, program=81, tempo=120, resolution=480, min_pitch=0):
     '''
     Decodes an array created using pretty_midi_to_numpy_array() and returns a pretty_midi object.
 
-    :param arr: The numpy array to be decoded
+    :param piano_roll: The numpy array to be decoded
     :param subdivision: The number of steps per quarter note. It is important that this has the same value as when
     the array was created in order to make sure note lengths are consistent.
     :param use_velocity: Whether or not velocity was used to encode the notes in the array. Should be the same as
@@ -175,12 +176,12 @@ def piano_roll_to_pretty_midi(arr, subdivision=4, program=81, tempo=120, resolut
     inst = pretty_midi.Instrument(program=program, is_drum=False)
     mid.instruments.append(inst)
 
-    for i, dur in np.ndenumerate(arr):
+    for i, dur in np.ndenumerate(piano_roll):
         if dur:
-            note_start = i[1] * step_size
-            note = pretty_midi.Note(velocity=DEFAULT_VELOCITY, pitch=i[0],
+            note_start = i[0] * step_size
+            note = pretty_midi.Note(velocity=DEFAULT_VELOCITY, pitch=min_pitch + i[1],
                                     start=mid.tick_to_time(note_start),
-                                    end=mid.tick_to_time(int(note_start + step_size * dur)))
+                                    end=mid.tick_to_time(int(note_start + step_size * dur))) # TODO * dur
 
             mid.instruments[0].notes.append(note)
 

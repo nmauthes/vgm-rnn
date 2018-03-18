@@ -29,8 +29,13 @@ ALLOWED_KEYS = ['Db Major', 'D Major', 'Eb Major', 'E Major', 'F Major', 'Gb Maj
                 'Ab Major', 'A Major', 'Bb Major', 'B Major', 'C minor', 'C# minor', 'D minor', 'Eb minor',
                 'E minor', 'F minor', 'F# minor', 'G minor', 'G# minor', 'A minor', 'Bb minor', 'B minor']
 
+MIN_MIDI_NOTE = 36
+MAX_MIDI_NOTE = 84
+
 SUBDIVISION = 4 # Number of steps per quarter note (e.g. 4 = 16th notes)
 MAX_DURATION = SUBDIVISION * 4 # Corresponds to 1 whole note
+
+SEQUENCE_LENGTH = SUBDIVISION * 4 * 4
 
 
 if __name__ == '__main__':
@@ -39,7 +44,7 @@ if __name__ == '__main__':
         training_data = np.load(TRAINING_DATA_PATH) # Load saved training data if available
     else:
         print('Building training set. This might take a while...')
-        training_data = np.empty(shape=(128, 0)) # Otherwise gather MIDIs and build training set
+        training_data = np.empty(shape=(0, 128)) # Otherwise gather MIDIs and build training set
 
         errors = 0
         for i, folder in enumerate(DATA_FOLDERS):
@@ -51,11 +56,14 @@ if __name__ == '__main__':
                 for mid in midis:
                     try:
                         arr = pretty_midi_to_piano_roll(mid, subdivision=SUBDIVISION, transpose_notes=True)
-                        training_data = np.concatenate((training_data, arr), axis=1)
+                        training_data = np.concatenate((training_data, arr), axis=0)
                     except MIDIError:
                         errors += 1
             else:
                 raise Exception('Data folder not found!')
+
+            if errors:
+                print(f'{errors} errors occurred')
 
             print('Saving training data...')
             np.save(TRAINING_DATA_PATH, training_data) # Serialize array containing training data for future use
