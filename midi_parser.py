@@ -8,6 +8,7 @@ to numpy array and vice versa.
 '''
 
 import os
+import math
 import pickle
 from copy import deepcopy
 
@@ -82,8 +83,10 @@ def filter_midi_files(data_folder, allowed_time_sigs, allowed_keys, max_time_cha
     return filtered_files
 
 
-def pretty_midi_to_numpy_array(midi_data, subdivision=4, max_duration=16, use_velocity=False, transpose_notes=False,
-                               ignore_drums=True):
+# TODO rewrite docs
+def pretty_midi_to_piano_roll(midi_data, subdivision=4, max_duration=16, sensitivity=0.2, transpose_notes=False,
+                              ignore_drums=True):
+
     '''
     Encodes a pretty_midi object into an array with shape (128, t, 2) where the first axis is MIDI pitch, t is
     the number of timesteps in the song, and the last axis is a pair [v, d] where v is the note's velocity (unless
@@ -93,14 +96,16 @@ def pretty_midi_to_numpy_array(midi_data, subdivision=4, max_duration=16, use_ve
     :param subdivision: The resolution at which to sample notes in the song where subdivision is the number of steps
     per quarter note(e.g. for subdivision=4, 1/subdivision represents a 16th note)
     :param max_duration: The maximum duration (number of steps) an encoded note can have. Default is 16.
-    :param use_velocity: If true, velocity of the note is used for v (above), otherwise binary values where 1=on 0=off
     :param transpose_notes: If true, the notes will be transposed to C before encoding (key signature must be present)
     :param ignore_drums: If true, skips all drum instruments (i.e. where is_drum=True) in the song
     :return: A numpy array of shape (128, t, 2) encoding the notes in the pretty_midi object
     '''
 
     if subdivision not in ALLOWED_SUBDIVISIONS:
-        raise Exception("That subdivision is not allowed!")
+        raise Exception('That subdivision is not allowed!')
+
+    if not (0 <= sensitivity < 0.5):
+        raise Exception('Sensitivity must be in the range [0, 0.5)')
 
     if transpose_notes:
         try:
@@ -108,31 +113,44 @@ def pretty_midi_to_numpy_array(midi_data, subdivision=4, max_duration=16, use_ve
         except:
             raise MIDIError('MIDI file could not be transposed.')
 
-    step_size = midi_data.resolution // subdivision
-    total_ticks = midi_data.time_to_tick(midi_data.get_end_time())
+    if midi_data.resolution % subdivision == 0: # Make sure we get even subdivisions of the quarter
+        step_size = midi_data.resolution // subdivision
+    else:
+        raise MIDIError('Invalid step size (try changing the subdivision)')
 
-    if step_size == 0:
-        raise MIDIError('The step size is too small (try decreasing the subdivision)')
+    end_ticks = midi_data.time_to_tick(midi_data.get_end_time())
+    num_measures = math.ceil(end_ticks / (midi_data.resolution * 4)) # Assumes 4/4 time
 
-    piano_roll = np.zeros((128, int(round(total_ticks / step_size)) + 1, 2), dtype=np.int)
+    piano_roll = np.zeros((128, num_measures * subdivision * 4), dtype=np.int)
 
     for inst in midi_data.instruments:
         if ignore_drums and inst.is_drum:
             continue
 
-        for note in inst.notes:  # Notes that don't fall exactly on the grid are quantized to the nearest subdivision
-            note_start = int(round(midi_data.time_to_tick(note.start) / step_size))
-            duration = int(round(midi_data.time_to_tick(note.end - note.start) / step_size))
+        for note in inst.notes:
+            relative_pos = midi_data.time_to_tick(note.start) / step_size
+            nearest_step = round(relative_pos)
 
-            if duration > max_duration:
-                duration = max_duration
+            # Ensure that notes don't jump between measures and prevent out of bounds errors
+            if nearest_step % (subdivision * 4) == 0 and relative_pos < nearest_step:
+                nearest_step -= 1
 
-            piano_roll[note.pitch, note_start] = [note.velocity, duration] if use_velocity else [1, duration]
+            # If note is in the right range, add it to the piano roll
+            if nearest_step - sensitivity <= relative_pos <= nearest_step + sensitivity:
+                note_start = int(nearest_step)
+                duration = int(round(midi_data.time_to_tick(note.end - note.start) / step_size))
+
+                if duration < 1:
+                    duration = 1
+                if duration > max_duration:
+                    duration = max_duration
+
+                piano_roll[note.pitch, note_start] = duration
 
     return piano_roll
 
 
-def numpy_array_to_pretty_midi(arr, subdivision=4, use_velocity=False, program=81, tempo=120, resolution=480):
+def piano_roll_to_pretty_midi(arr, subdivision=4, program=81, tempo=120, resolution=480):
     '''
     Decodes an array created using pretty_midi_to_numpy_array() and returns a pretty_midi object.
 
@@ -157,12 +175,10 @@ def numpy_array_to_pretty_midi(arr, subdivision=4, use_velocity=False, program=8
     inst = pretty_midi.Instrument(program=program, is_drum=False)
     mid.instruments.append(inst)
 
-    for pitch, time in np.ndindex(arr.shape[0], arr.shape[1]):
-        (vel, dur) = arr[pitch][time][0], arr[pitch][time][1]
-
-        if vel:
-            note_start = time * step_size
-            note = pretty_midi.Note(velocity=vel if use_velocity else DEFAULT_VELOCITY, pitch=pitch,
+    for i, dur in np.ndenumerate(arr):
+        if dur:
+            note_start = i[1] * step_size
+            note = pretty_midi.Note(velocity=DEFAULT_VELOCITY, pitch=i[0],
                                     start=mid.tick_to_time(note_start),
                                     end=mid.tick_to_time(int(note_start + step_size * dur)))
 
