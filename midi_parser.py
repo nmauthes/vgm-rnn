@@ -85,7 +85,7 @@ def filter_midi_files(data_folder, allowed_time_sigs, allowed_keys, max_time_cha
 
 
 # TODO rewrite docs
-def pretty_midi_to_piano_roll(midi_data, subdivision=4, max_duration=16, sensitivity=0.2, transpose_notes=False,
+def pretty_midi_to_piano_roll(mid, subdivision=4, max_duration=16, sensitivity=0.2, transpose_notes=False,
                               ignore_drums=True):
 
     '''
@@ -93,7 +93,7 @@ def pretty_midi_to_piano_roll(midi_data, subdivision=4, max_duration=16, sensiti
     the number of timesteps in the song, and the last axis is a pair [v, d] where v is the note's velocity (unless
     use_velocity is false) and d is its duration in number of timesteps.
 
-    :param midi_data: The pretty_midi object to be encoded
+    :param mid: The pretty_midi object to be encoded
     :param subdivision: The resolution at which to sample notes in the song where subdivision is the number of steps
     per quarter note(e.g. for subdivision=4, 1/subdivision represents a 16th note)
     :param max_duration: The maximum duration (number of steps) an encoded note can have. Default is 16.
@@ -110,26 +110,26 @@ def pretty_midi_to_piano_roll(midi_data, subdivision=4, max_duration=16, sensiti
 
     if transpose_notes:
         try:
-            transpose_to_c(midi_data)
+            transpose_to_c(mid)
         except:
             raise MIDIError('MIDI file could not be transposed.')
 
-    if midi_data.resolution % subdivision == 0: # Make sure we get even subdivisions of the quarter
-        step_size = midi_data.resolution // subdivision
+    if mid.resolution % subdivision == 0: # Make sure we get even subdivisions of the quarter
+        step_size = mid.resolution // subdivision
     else:
         raise MIDIError('Invalid step size (try changing the subdivision)')
 
-    end_ticks = midi_data.time_to_tick(midi_data.get_end_time())
-    num_measures = math.ceil(end_ticks / (midi_data.resolution * 4)) # Assumes 4/4 time
+    end_ticks = mid.time_to_tick(mid.get_end_time())
+    num_measures = math.ceil(end_ticks / (mid.resolution * 4)) # Assumes 4/4 time
 
     piano_roll = np.zeros((num_measures * subdivision * 4, 128), dtype=np.int)
 
-    for inst in midi_data.instruments:
+    for inst in mid.instruments:
         if ignore_drums and inst.is_drum:
             continue
 
         for note in inst.notes:
-            relative_pos = midi_data.time_to_tick(note.start) / step_size
+            relative_pos = mid.time_to_tick(note.start) / step_size
             nearest_step = round(relative_pos)
 
             # Ensure that notes don't jump between measures and prevent out of bounds errors
@@ -139,7 +139,7 @@ def pretty_midi_to_piano_roll(midi_data, subdivision=4, max_duration=16, sensiti
             # If note is in the right range, add it to the piano roll
             if nearest_step - sensitivity <= relative_pos <= nearest_step + sensitivity:
                 note_start = int(nearest_step)
-                duration = int(round(midi_data.time_to_tick(note.end - note.start) / step_size))
+                duration = int(round(mid.time_to_tick(note.end - note.start) / step_size))
 
                 if duration < 1:
                     duration = 1
@@ -207,32 +207,32 @@ def midi_file_to_pretty_midi(midi_file):
     return mid
 
 
-def transpose(midi_data, semitones):
+def transpose(mid, semitones):
     '''
     Transposes all the notes in a pretty_midi object by the specified number of semitones.
     Any drum instruments in the object will not be modified.
 
-    :param midi_data: The pretty_midi object to be transposed
+    :param mid: The pretty_midi object to be transposed
     :param semitones: The number semitones to transpose the notes up (positive) or down (negative)
     '''
 
-    for inst in midi_data.instruments:
+    for inst in mid.instruments:
         if not inst.is_drum: # Don't transpose drum tracks
             for note in inst.notes:
                 note.pitch += semitones
 
 
-def transpose_to_c(midi_data):
+def transpose_to_c(mid):
     '''
     A special case of transpose that moves all notes to the key of C (major or minor)
     Note that in order to know the how many semitones to transpose, the original key (i.e. key_signature_changes[0]
     must be present. Otherwise an exception will be thrown.
 
-    :param midi_data: The pretty_midi object to be transposed
+    :param mid: The pretty_midi object to be transposed
     '''
 
-    if midi_data.key_signature_changes:
-        key = midi_data.key_signature_changes[0]
+    if mid.key_signature_changes:
+        key = mid.key_signature_changes[0]
     else:
         raise MIDIError('MIDI key signature could not be determined.')
 
@@ -241,25 +241,25 @@ def transpose_to_c(midi_data):
     if not pos_in_octave == 0:
         semitones = -pos_in_octave if pos_in_octave < 6 else 12 - pos_in_octave # Transpose up or down given dist from C
 
-        transpose(midi_data, semitones)
+        transpose(mid, semitones)
 
 
-def split_drums(midi_data):
+def split_drums(mid):
     '''
     Splits a pretty_midi into two separate objects, one containing only the drum parts,
     and one containing all the other parts.
 
-    :param midi_data: The pretty_midi object to be split
+    :param mid: The pretty_midi object to be split
     :return: (drums, not_drums) Tuple containing pretty_midi objs split as described above
     '''
 
-    drums = deepcopy(midi_data)
-    not_drums = deepcopy(midi_data)
+    drums = deepcopy(mid)
+    not_drums = deepcopy(mid)
 
     drums.instruments = []
     not_drums.instruments = []
 
-    for inst in midi_data.instruments:
+    for inst in mid.instruments:
         if inst.is_drum:
             drums.instruments.append(deepcopy(inst))
         else:

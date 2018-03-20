@@ -14,11 +14,11 @@ import numpy as np
 #from keras.layers import LSTM
 #from keras.optimizers import RMSprop
 
-from midi_parser import MIDIError, filter_midi_files, pretty_midi_to_piano_roll, piano_roll_to_pretty_midi
+from midi_parser import MIDIError, filter_midi_files, pretty_midi_to_piano_roll
 
 
 DATA_FOLDERS = ['nes_data']
-TRAINING_DATA_PATH = 'training_data.npy'
+MIDI_DATA_PATH = 'training_data.npy'
 
 ALLOWED_TIME_SIGS = ['4/4']
 
@@ -31,6 +31,7 @@ ALLOWED_KEYS = ['Db Major', 'D Major', 'Eb Major', 'E Major', 'F Major', 'Gb Maj
 
 MIN_MIDI_NOTE = 36
 MAX_MIDI_NOTE = 84
+MIDI_NOTE_RANGE = MAX_MIDI_NOTE - MIN_MIDI_NOTE + 1
 
 SUBDIVISION = 4 # Number of steps per quarter note (e.g. 4 = 16th notes)
 MAX_DURATION = SUBDIVISION * 4 # Corresponds to 1 whole note
@@ -39,12 +40,14 @@ SEQUENCE_LENGTH = SUBDIVISION * 4 * 4
 
 
 if __name__ == '__main__':
-    if os.path.exists(TRAINING_DATA_PATH):
+    if os.path.exists(MIDI_DATA_PATH):
         print('Loading training data...')
-        training_data = np.load(TRAINING_DATA_PATH) # Load saved training data if available
+        midi_data = np.load(MIDI_DATA_PATH) # Load saved training data if available
+
+        print(midi_data.shape)
     else:
         print('Building training set. This might take a while...')
-        training_data = np.empty(shape=(0, 128)) # Otherwise gather MIDIs and build training set
+        midi_data = np.empty(shape=(0, 128)) # Otherwise gather MIDIs and build training set
 
         errors = 0
         for i, folder in enumerate(DATA_FOLDERS):
@@ -56,7 +59,7 @@ if __name__ == '__main__':
                 for mid in midis:
                     try:
                         arr = pretty_midi_to_piano_roll(mid, subdivision=SUBDIVISION, transpose_notes=True)
-                        training_data = np.concatenate((training_data, arr), axis=0)
+                        midi_data = np.concatenate((midi_data, arr), axis=0)
                     except MIDIError:
                         errors += 1
             else:
@@ -66,10 +69,16 @@ if __name__ == '__main__':
                 print(f'{errors} errors occurred')
 
             print('Saving training data...')
-            np.save(TRAINING_DATA_PATH, training_data) # Serialize array containing training data for future use
+            np.save(MIDI_DATA_PATH, midi_data) # Serialize array containing training data for future use
+
+    print(f'Total timesteps: {len(midi_data)}')
+
+    # TODO Split data into training/labels
+    # TODO Build network
+    # TODO Train network
 
     #model = Sequential()
-    #model.add(LSTM(128, input_shape=(training_data.shape[1], 2))
+    #model.add(LSTM(128, input_shape=(SEQUENCE_LENGTH, MIDI_NOTE_RANGE))
 
 
 
