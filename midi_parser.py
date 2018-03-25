@@ -19,8 +19,6 @@ import numpy as np
 ALLOWED_SUBDIVISIONS = [1, 2, 4, 8]
 DEFAULT_VELOCITY = 110
 
-PICKLED_MIDI_PATH = 'training_data.pkl'
-
 
 # Exception class for MIDI-specific errors
 class MIDIError(Exception):
@@ -28,7 +26,7 @@ class MIDIError(Exception):
 
 
 def filter_midi_files(data_folder, allowed_time_sigs, allowed_keys, max_time_changes=1, max_key_changes=1,
-                      ignore_filters=False, pickle_result=False, path=PICKLED_MIDI_PATH):
+                      ignore_filters=False, pickle_result=False, path='training_data.pkl'):
     '''
     A function to filter a group of MIDI files by selecting only the ones that meet the specified criteria
     supplied for key, time signature, etc (e.g. only files in the key of C major with a 4/4 time signature).

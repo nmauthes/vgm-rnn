@@ -2,6 +2,8 @@
 
 Train the RNN on a collection of MIDI files.
 
+:authors Nicolas Mauthes
+
 '''
 
 import os
@@ -12,7 +14,6 @@ import numpy as np
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout
 from keras.layers import LSTM
-from keras.optimizers import RMSprop
 
 from midi_parser import MIDIError, filter_midi_files, pretty_midi_to_piano_roll
 
@@ -47,7 +48,7 @@ OPTIMIZER = 'adam'
 LEARNING_RATE = 0.001
 
 BATCH_SIZE = 50
-MAX_EPOCHS = 200
+MAX_EPOCHS = 1
 
 LSTM_UNITS = 128
 DECODER_LAYERS = 2
@@ -56,7 +57,12 @@ DECODER_LAYERS = 2
 
 
 def build_model():
-    pass
+    model = Sequential()
+    model.add(LSTM(LSTM_UNITS, input_shape=(SEQUENCE_LENGTH, MIDI_NOTE_RANGE), activation='tanh', return_sequences=True))
+    model.add(Dense(MIDI_NOTE_RANGE))
+    model.add(Activation('softmax'))
+
+    return model
 
 
 def split_xy(data, seq_length):
@@ -121,16 +127,12 @@ if __name__ == '__main__':
     label_data = label_data[:, :, MIN_MIDI_NOTE:MAX_MIDI_NOTE + 1]
 
     print(f'Number of sequences: {len(training_data)} ({SEQUENCE_LENGTH} timesteps per sequence)')
+    print('-' * 25)
 
     # TODO Build network
     # TODO Train network
 
-    # TODO put in separate method
-    model = Sequential()
-    model.add(LSTM(LSTM_UNITS, input_shape=(SEQUENCE_LENGTH, MIDI_NOTE_RANGE), activation='tanh', return_sequences=True))
-    model.add(Dense(MIDI_NOTE_RANGE))
-    model.add(Activation('softmax'))
-
+    model = build_model()
     model.compile(loss=LOSS_FUNCTION, optimizer=OPTIMIZER)
 
-    #model.fit(training_data, label_data, batch_size=BATCH_SIZE, epochs=MAX_EPOCHS)
+    model.fit(training_data, label_data, batch_size=BATCH_SIZE, epochs=MAX_EPOCHS)
