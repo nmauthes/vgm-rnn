@@ -21,6 +21,8 @@ DEFAULT_VELOCITY = 110
 
 PICKLED_MIDI_PATH = 'training_data.pkl'
 
+
+# Exception class for MIDI-specific errors
 class MIDIError(Exception):
     pass
 
@@ -146,12 +148,12 @@ def pretty_midi_to_piano_roll(mid, subdivision=4, max_duration=16, sensitivity=0
                 if duration > max_duration:
                     duration = max_duration
 
-                piano_roll[note_start, note.pitch] = duration
+                piano_roll[note_start, note.pitch] = 1 # TODO ignore duration for now
 
     return piano_roll
 
 
-def piano_roll_to_pretty_midi(piano_roll, subdivision=4, program=81, tempo=120, resolution=480, min_pitch=0):
+def piano_roll_to_pretty_midi(piano_roll, subdivision=4, program=81, tempo=120, resolution=480, pitch_offset=0):
     '''
     Decodes an array created using pretty_midi_to_numpy_array() and returns a pretty_midi object.
 
@@ -179,9 +181,9 @@ def piano_roll_to_pretty_midi(piano_roll, subdivision=4, program=81, tempo=120, 
     for i, dur in np.ndenumerate(piano_roll):
         if dur:
             note_start = i[0] * step_size
-            note = pretty_midi.Note(velocity=DEFAULT_VELOCITY, pitch=min_pitch + i[1],
+            note = pretty_midi.Note(velocity=DEFAULT_VELOCITY, pitch=pitch_offset + i[1],
                                     start=mid.tick_to_time(note_start),
-                                    end=mid.tick_to_time(int(note_start + step_size * dur))) # TODO * dur
+                                    end=mid.tick_to_time(int(note_start + step_size * dur)))
 
             mid.instruments[0].notes.append(note)
 
