@@ -54,6 +54,9 @@ def get_midi_files(args):
     if errors:
         print(f'{errors} errors occurred')
 
+
+# |---------- COMMAND LINE ARGS ----------|
+
 parser = argparse.ArgumentParser(
     description='Utility for scraping MIDI files from VGMusic.com',
     formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -76,6 +79,8 @@ parser.add_argument(
     default=10000,
     help='The number of files to download from a given URL. Default is 10,000.'
 )
+
+# |---------------------------------------|
 
 
 if __name__ == '__main__':

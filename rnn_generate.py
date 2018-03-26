@@ -12,27 +12,35 @@ import argparse
 
 import numpy as np
 
-from rnn_train import *
+from rnn_train import MIDI_DATA_PATH, SUBDIVISION
+from rnn_train import SAVED_WEIGHTS_PATH, SEQUENCE_LENGTH, MIN_MIDI_NOTE, MAX_MIDI_NOTE, build_model
 from midi_parser import piano_roll_to_pretty_midi
 
 
 # |---------- GENERATION PARAMS ----------|
 
-GENERATED_FILE_PATH = 'examples'
+MIDI_PROGRAM = 0
 
-GENERATED_STEPS = NOTES_IN_MEASURE * 8
+GENERATED_MIDI_FOLDER = 'examples'
+GENERATED_FILENAME = 'example.mid'
+
+SAVE_PRIMER_SEQUENCE = True
+PRIMER_FILENAME = 'primer.mid'
+
+NUM_ITERATIONS = 1
+SAMPLING_THRESHOLD = 0.35
 
 # |---------------------------------------|
 
 
-def sample(probabilities, threshold=0.2): # TODO make nicer
-    for i, prob in np.ndenumerate(probabilities):
+def prob_matrix_to_piano_roll(prob_matrix, threshold=0.2): # TODO make nicer
+    for i, prob in np.ndenumerate(prob_matrix):
         if prob >= threshold:
-            probabilities[i] = 1
+            prob_matrix[i] = 1
         else:
-            probabilities[i] = 0
+            prob_matrix[i] = 0
 
-    return probabilities
+    return prob_matrix
 
 
 if __name__ == '__main__':
@@ -51,9 +59,20 @@ if __name__ == '__main__':
     primer_sequence = np.asarray(primer_sequence)
 
     model = build_model()
-    probabilities = model.predict(primer_sequence)[0]
+    model.load_weights(SAVED_WEIGHTS_PATH)
 
-    piano_roll = sample(probabilities)
+    note_probs = model.predict(primer_sequence)[0]
 
-    generated_mid = piano_roll_to_pretty_midi(piano_roll, pitch_offset=MIN_MIDI_NOTE)
-    generated_mid.write('gen.mid')
+    # Save the primer sequence for reference
+    if SAVE_PRIMER_SEQUENCE:
+        primer = piano_roll_to_pretty_midi(primer_sequence[0], subdivision=SUBDIVISION, program=MIDI_PROGRAM,
+                                           pitch_offset=MIN_MIDI_NOTE)
+        primer.write(PRIMER_FILENAME)
+        print(f'Primer saved as \'{PRIMER_FILENAME}\'')
+
+    piano_roll = prob_matrix_to_piano_roll(note_probs, threshold=SAMPLING_THRESHOLD)
+    generated_mid = piano_roll_to_pretty_midi(piano_roll, subdivision=SUBDIVISION, program=MIDI_PROGRAM,
+                                              pitch_offset=MIN_MIDI_NOTE)
+    generated_mid.write(GENERATED_FILENAME)
+
+    print(f'Generated file saved as \'{GENERATED_FILENAME}\'')

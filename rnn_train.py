@@ -14,6 +14,7 @@ import numpy as np
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout
 from keras.layers import LSTM
+from keras.optimizers import Adam
 
 from midi_parser import MIDIError, filter_midi_files, pretty_midi_to_piano_roll
 
@@ -39,24 +40,24 @@ MAX_DURATION = NOTES_IN_MEASURE # Corresponds to 1 whole note
 
 # |---------- TRAINING PARAMS ----------|
 
-SAVED_WEIGHTS_PATH = ''
+SAVED_WEIGHTS_PATH = 'rnn_weights.h5'
 
 SEQUENCE_LENGTH = SUBDIVISION * 4 * 4
 
 LOSS_FUNCTION = 'categorical_crossentropy'
-OPTIMIZER = 'adam'
-LEARNING_RATE = 0.001
+LEARNING_RATE = 0.01
+OPTIMIZER = Adam(lr=LEARNING_RATE)
 
 BATCH_SIZE = 50
-MAX_EPOCHS = 1
+MAX_EPOCHS = 50
 
-LSTM_UNITS = 128
+LSTM_UNITS = 256
 DECODER_LAYERS = 2
 
 # |-------------------------------------|
 
 
-def build_model():
+def build_model(): # TODO expand architecture
     model = Sequential()
     model.add(LSTM(LSTM_UNITS, input_shape=(SEQUENCE_LENGTH, MIDI_NOTE_RANGE), activation='tanh', return_sequences=True))
     model.add(Dense(MIDI_NOTE_RANGE))
@@ -77,15 +78,14 @@ def split_xy(data, seq_length):
         x.append(data[i:i + seq_length])
         y.append(data[i + 1: i + seq_length + 1])
 
-    X = np.asarray(x)
-    Y = np.asarray(y)
+    x = np.asarray(x)
+    y = np.asarray(y)
 
-    return X, Y # TODO shuffle?
+    return x, y # TODO shuffle?
 
 
 if __name__ == '__main__':
     # Load/build midi data
-
     if os.path.exists(MIDI_DATA_PATH):
         print('Loading data...')
         midi_data = np.load(MIDI_DATA_PATH) # Load saved training data if available
@@ -129,10 +129,14 @@ if __name__ == '__main__':
     print(f'Number of sequences: {len(training_data)} ({SEQUENCE_LENGTH} timesteps per sequence)')
     print('-' * 25)
 
-    # TODO Build network
-    # TODO Train network
-
+    # Build model, train and save weights
     model = build_model()
     model.compile(loss=LOSS_FUNCTION, optimizer=OPTIMIZER)
 
-    model.fit(training_data, label_data, batch_size=BATCH_SIZE, epochs=MAX_EPOCHS)
+    model.fit(training_data, label_data, batch_size=BATCH_SIZE, epochs=MAX_EPOCHS) # TODO early stopping, checkpoints
+    model.save_weights(SAVED_WEIGHTS_PATH)
+
+    print()
+    print(f'Weights saved as \'{SAVED_WEIGHTS_PATH}\'')
+
+    #os.system('shutdown -s')
