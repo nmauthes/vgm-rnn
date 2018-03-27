@@ -13,13 +13,13 @@ import argparse
 import numpy as np
 
 from rnn_train import MIDI_DATA_PATH, SUBDIVISION
-from rnn_train import SAVED_WEIGHTS_PATH, SEQUENCE_LENGTH, MIN_MIDI_NOTE, MAX_MIDI_NOTE, build_model
+from rnn_train import MODEL_FOLDER, SAVED_WEIGHTS_PATH, SEQUENCE_LENGTH, MIN_MIDI_NOTE, MAX_MIDI_NOTE, build_model
 from midi_parser import piano_roll_to_pretty_midi
 
 
 # |---------- GENERATION PARAMS ----------|
 
-MIDI_PROGRAM = 0
+MIDI_PROGRAM = 1
 
 GENERATED_MIDI_FOLDER = 'examples'
 GENERATED_FILENAME = 'example.mid'
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     primer_sequence = np.asarray(primer_sequence)
 
     model = build_model()
-    model.load_weights(SAVED_WEIGHTS_PATH)
+    model.load_weights(os.path.join(MODEL_FOLDER, SAVED_WEIGHTS_PATH))
 
     note_probs = model.predict(primer_sequence)[0]
 
@@ -67,12 +67,12 @@ if __name__ == '__main__':
     if SAVE_PRIMER_SEQUENCE:
         primer = piano_roll_to_pretty_midi(primer_sequence[0], subdivision=SUBDIVISION, program=MIDI_PROGRAM,
                                            pitch_offset=MIN_MIDI_NOTE)
-        primer.write(PRIMER_FILENAME)
+        primer.write(os.path.join(GENERATED_MIDI_FOLDER, PRIMER_FILENAME))
         print(f'Primer saved as \'{PRIMER_FILENAME}\'')
 
     piano_roll = prob_matrix_to_piano_roll(note_probs, threshold=SAMPLING_THRESHOLD)
     generated_mid = piano_roll_to_pretty_midi(piano_roll, subdivision=SUBDIVISION, program=MIDI_PROGRAM,
                                               pitch_offset=MIN_MIDI_NOTE)
-    generated_mid.write(GENERATED_FILENAME)
+    generated_mid.write(os.path.join(GENERATED_MIDI_FOLDER, GENERATED_FILENAME))
 
     print(f'Generated file saved as \'{GENERATED_FILENAME}\'')

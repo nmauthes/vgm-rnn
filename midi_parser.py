@@ -151,7 +151,7 @@ def pretty_midi_to_piano_roll(mid, subdivision=4, max_duration=16, sensitivity=0
     return piano_roll
 
 
-def piano_roll_to_pretty_midi(piano_roll, subdivision=4, program=81, tempo=120, resolution=480, pitch_offset=0):
+def piano_roll_to_pretty_midi(piano_roll, subdivision=4, program=82, tempo=120, resolution=480, pitch_offset=0):
     '''
     Decodes an array created using pretty_midi_to_numpy_array() and returns a pretty_midi object.
 
@@ -173,7 +173,7 @@ def piano_roll_to_pretty_midi(piano_roll, subdivision=4, program=81, tempo=120, 
 
     mid = pretty_midi.PrettyMIDI(initial_tempo=tempo, resolution=resolution)
 
-    inst = pretty_midi.Instrument(program=program, is_drum=False)
+    inst = pretty_midi.Instrument(program=program - 1, is_drum=False)
     mid.instruments.append(inst)
 
     for i, dur in np.ndenumerate(piano_roll):

@@ -15,6 +15,7 @@ from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout
 from keras.layers import LSTM
 from keras.optimizers import Adam
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 from midi_parser import MIDIError, filter_midi_files, pretty_midi_to_piano_roll
 
@@ -40,6 +41,7 @@ MAX_DURATION = NOTES_IN_MEASURE # Corresponds to 1 whole note
 
 # |---------- TRAINING PARAMS ----------|
 
+MODEL_FOLDER = 'model'
 SAVED_WEIGHTS_PATH = 'rnn_weights.h5'
 
 SEQUENCE_LENGTH = SUBDIVISION * 4 * 4
@@ -49,10 +51,13 @@ LEARNING_RATE = 0.01
 OPTIMIZER = Adam(lr=LEARNING_RATE)
 
 BATCH_SIZE = 50
-MAX_EPOCHS = 50
+MAX_EPOCHS = 5
 
 LSTM_UNITS = 256
 DECODER_LAYERS = 2
+
+SAVE_CHECKPOINTS = False
+EARLY_STOPPING = False
 
 # |-------------------------------------|
 
@@ -81,7 +86,7 @@ def split_xy(data, seq_length):
     x = np.asarray(x)
     y = np.asarray(y)
 
-    return x, y # TODO shuffle?
+    return x, y
 
 
 if __name__ == '__main__':
@@ -129,14 +134,26 @@ if __name__ == '__main__':
     print(f'Number of sequences: {len(training_data)} ({SEQUENCE_LENGTH} timesteps per sequence)')
     print('-' * 25)
 
-    # Build model, train and save weights
+    # Build and compile model
     model = build_model()
     model.compile(loss=LOSS_FUNCTION, optimizer=OPTIMIZER)
 
-    model.fit(training_data, label_data, batch_size=BATCH_SIZE, epochs=MAX_EPOCHS) # TODO early stopping, checkpoints
-    model.save_weights(SAVED_WEIGHTS_PATH)
+    # TODO early stopping, checkpoints
+
+    # Callbacks and regularization
+    callbacks = []
+
+    if EARLY_STOPPING:
+        early_stopping = EarlyStopping(monitor='loss', min_delta=0.01, patience=10)
+        callbacks.append(early_stopping)
+
+    if SAVE_CHECKPOINTS:
+        checkpoints = ModelCheckpoint(MODEL_FOLDER, monitor='loss', save_best_only=True, save_weights_only=True)
+        callbacks.append(checkpoints)
+
+    # Train model, then save weights
+    model.fit(training_data, label_data, batch_size=BATCH_SIZE, epochs=MAX_EPOCHS, callbacks=callbacks) # TODO shuffle?
+    model.save_weights(os.path.join(MODEL_FOLDER, SAVED_WEIGHTS_PATH)) # TODO validation?
 
     print()
     print(f'Weights saved as \'{SAVED_WEIGHTS_PATH}\'')
-
-    #os.system('shutdown -s')
