@@ -60,7 +60,7 @@ def get_midi_files(args):
 parser = argparse.ArgumentParser(
     description='Utility for scraping MIDI files from VGMusic.com',
     formatter_class=argparse.RawDescriptionHelpFormatter,
-    epilog='See the README for for the questions'
+    epilog='See the README for further questions'
 )
 
 parser.add_argument(

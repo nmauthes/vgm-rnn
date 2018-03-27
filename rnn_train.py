@@ -7,6 +7,7 @@ Train the RNN on a collection of MIDI files.
 '''
 
 import os
+import time
 import argparse
 import pickle
 
@@ -51,13 +52,12 @@ LEARNING_RATE = 0.01
 OPTIMIZER = Adam(lr=LEARNING_RATE)
 
 BATCH_SIZE = 50
-MAX_EPOCHS = 5
+MAX_EPOCHS = 1
 
 LSTM_UNITS = 256
 DECODER_LAYERS = 2
 
 SAVE_CHECKPOINTS = False
-EARLY_STOPPING = False
 
 # |-------------------------------------|
 
@@ -89,7 +89,34 @@ def split_xy(data, seq_length):
     return x, y
 
 
+def get_formatted_time(time_in_sec):
+    hours = int(time_in_sec // 3600)
+    minutes = int(time_in_sec % 3600 // 60)
+    seconds = int(time_in_sec % 60)
+
+    return f'{"{0:0>2}".format(hours)}h:{"{0:0>2}".format(minutes)}m:{"{0:0>2}".format(seconds)}s'
+
+
+# |---------- COMMAND LINE ARGS ----------|
+
+parser = argparse.ArgumentParser(
+    description='Build and train a new RNN model',
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    epilog='See the README for further questions'
+)
+
+parser.add_argument(
+    '--save_checkpoints',
+    default=SAVE_CHECKPOINTS,
+    help='Whether to save model checkpoints during training.'
+)
+
+# |---------------------------------------|
+
+
 if __name__ == '__main__':
+    args = parser.parse_args()
+
     # Load/build midi data
     if os.path.exists(MIDI_DATA_PATH):
         print('Loading data...')
@@ -143,17 +170,20 @@ if __name__ == '__main__':
     # Callbacks and regularization
     callbacks = []
 
-    if EARLY_STOPPING:
-        early_stopping = EarlyStopping(monitor='loss', min_delta=0.01, patience=10)
-        callbacks.append(early_stopping)
-
-    if SAVE_CHECKPOINTS:
+    if args.save_checkpoints:
         checkpoints = ModelCheckpoint(MODEL_FOLDER, monitor='loss', save_best_only=True, save_weights_only=True)
         callbacks.append(checkpoints)
 
+    early_stopping = EarlyStopping(monitor='loss', min_delta=0.01, patience=10)
+    callbacks.append(early_stopping)
+
     # Train model, then save weights
+    start_time = time.time()
     model.fit(training_data, label_data, batch_size=BATCH_SIZE, epochs=MAX_EPOCHS, callbacks=callbacks) # TODO shuffle?
+    training_time = time.time() - start_time
+
     model.save_weights(os.path.join(MODEL_FOLDER, SAVED_WEIGHTS_PATH)) # TODO validation?
 
     print()
+    print(f'Training time was {get_formatted_time(training_time)}')
     print(f'Weights saved as \'{SAVED_WEIGHTS_PATH}\'')
