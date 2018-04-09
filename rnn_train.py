@@ -16,7 +16,7 @@ from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout
 from keras.layers import LSTM
 from keras.optimizers import Adam
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
 
 from midi_parser import MIDIError, filter_midi_files, pretty_midi_to_piano_roll
 
@@ -52,12 +52,13 @@ LEARNING_RATE = 0.01
 OPTIMIZER = Adam(lr=LEARNING_RATE)
 
 BATCH_SIZE = 50
-MAX_EPOCHS = 1
+MAX_EPOCHS = 200
 
 LSTM_UNITS = 256
 DECODER_LAYERS = 2
 
 SAVE_CHECKPOINTS = False
+SAVE_GRAPH = False
 
 # |-------------------------------------|
 
@@ -106,9 +107,20 @@ parser = argparse.ArgumentParser(
 )
 
 parser.add_argument(
+    '--max_epochs',
+    default=MAX_EPOCHS,
+    type=int,
+    help='The maximum number of epochs to allow for training.'
+)
+parser.add_argument(
     '--save_checkpoints',
     default=SAVE_CHECKPOINTS,
     help='Whether to save model checkpoints during training.'
+)
+parser.add_argument(
+    '--save_graph',
+    default=SAVE_GRAPH,
+    help='Whether to save a Tensorboard graph of the model.'
 )
 
 # |---------------------------------------|
@@ -174,12 +186,16 @@ if __name__ == '__main__':
         checkpoints = ModelCheckpoint(MODEL_FOLDER, monitor='loss', save_best_only=True, save_weights_only=True)
         callbacks.append(checkpoints)
 
+    if args.save_graph:
+        tb = TensorBoard(log_dir=MODEL_FOLDER)
+        callbacks.append(tb)
+
     early_stopping = EarlyStopping(monitor='loss', min_delta=0.01, patience=10)
     callbacks.append(early_stopping)
 
     # Train model, then save weights
     start_time = time.time()
-    model.fit(training_data, label_data, batch_size=BATCH_SIZE, epochs=MAX_EPOCHS, callbacks=callbacks) # TODO shuffle?
+    model.fit(training_data, label_data, batch_size=BATCH_SIZE, epochs=args.max_epochs, callbacks=callbacks) # TODO shuffle?
     training_time = time.time() - start_time
 
     model.save_weights(os.path.join(MODEL_FOLDER, SAVED_WEIGHTS_PATH)) # TODO validation?
