@@ -66,6 +66,9 @@ SAVE_GRAPH = False
 def build_model(): # TODO expand architecture
     model = Sequential()
     model.add(LSTM(LSTM_UNITS, input_shape=(SEQUENCE_LENGTH, MIDI_NOTE_RANGE), activation='tanh', return_sequences=True))
+    model.add(Dropout(0.5))
+    model.add(LSTM(LSTM_UNITS, activation='tanh', return_sequences=True))
+    model.add(Dropout(0.5))
     model.add(Dense(MIDI_NOTE_RANGE))
     model.add(Activation('softmax'))
 
@@ -160,6 +163,10 @@ if __name__ == '__main__':
             np.save(MIDI_DATA_PATH, midi_data) # Serialize array containing training data for future use
 
     print(f'Total timesteps: {len(midi_data)}')
+
+    # For determining average polyphony
+    nonzero_count = np.sum(np.any(midi_data, axis=1))
+    print(f'Average polyphony: {round(np.sum(midi_data) / nonzero_count, 2)} notes per chord')
 
     print('-' * 25)
     print('Preparing data for training...')
