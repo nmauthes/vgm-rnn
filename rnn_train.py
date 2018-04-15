@@ -18,7 +18,7 @@ from keras.layers import LSTM
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
 
-from midi_parser import MIDIError, filter_midi_files, pretty_midi_to_piano_roll
+from midi_parser import MIDIError, filter_midi_files, pretty_midi_to_piano_roll, stringify
 
 
 # |---------- MIDI PARAMS ----------|
@@ -164,18 +164,28 @@ if __name__ == '__main__':
 
     print(f'Total timesteps: {len(midi_data)}')
 
-    # For determining average polyphony
-    nonzero_count = np.sum(np.any(midi_data, axis=1))
+    nonzero_count = np.sum(np.any(midi_data, axis=1)) # For determining average polyphony
     print(f'Average polyphony: {round(np.sum(midi_data) / nonzero_count, 2)} notes per chord')
 
     print('-' * 25)
     print('Preparing data for training...')
 
-    training_data, label_data = split_xy(midi_data, SEQUENCE_LENGTH)
+    # Clamp MIDI note range and convert to string representation
+    midi_data = midi_data[:, MIN_MIDI_NOTE:MAX_MIDI_NOTE + 1]
+    midi_data = stringify(midi_data)
 
-    # Clamp MIDI note range
-    training_data = training_data[:, :, MIN_MIDI_NOTE:MAX_MIDI_NOTE + 1]
-    label_data = label_data[:, :, MIN_MIDI_NOTE:MAX_MIDI_NOTE + 1]
+    # Get unique tokens and create dict mapping each to an integer
+    tokens = np.unique(midi_data, axis=0)
+    num_tokens = len(tokens) # TODO Add 1 to size?
+
+    chord_dict = dict((chord, i) for i, chord in enumerate(tokens))
+
+    print(f'Number of unique tokens: {num_tokens}')
+
+    # Finally, create integer sequences for input to embedding layer
+    midi_data = np.asarray([chord_dict[chord] for chord in midi_data])
+
+    training_data, label_data = split_xy(midi_data, SEQUENCE_LENGTH)
 
     print(f'Number of sequences: {len(training_data)} ({SEQUENCE_LENGTH} timesteps per sequence)')
     print('-' * 25)
@@ -202,10 +212,10 @@ if __name__ == '__main__':
 
     # Train model, then save weights
     start_time = time.time()
-    model.fit(training_data, label_data, batch_size=BATCH_SIZE, epochs=args.max_epochs, callbacks=callbacks) # TODO shuffle?
+    #model.fit(training_data, label_data, batch_size=BATCH_SIZE, epochs=args.max_epochs, callbacks=callbacks) # TODO shuffle?
     training_time = time.time() - start_time
 
-    model.save_weights(os.path.join(MODEL_FOLDER, SAVED_WEIGHTS_PATH)) # TODO validation?
+    #model.save_weights(os.path.join(MODEL_FOLDER, SAVED_WEIGHTS_PATH)) # TODO validation?
 
     print()
     print(f'Training time was {get_formatted_time(training_time)}')

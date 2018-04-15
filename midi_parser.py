@@ -19,6 +19,8 @@ import numpy as np
 ALLOWED_SUBDIVISIONS = [1, 2, 4, 8]
 DEFAULT_VELOCITY = 110
 
+STR_DELIMITER = '-'
+
 
 # Exception class for MIDI-specific errors
 class MIDIError(Exception):
@@ -205,6 +207,30 @@ def midi_file_to_pretty_midi(midi_file):
         raise MIDIError('Bad MIDI file!')
 
     return mid
+
+
+def stringify(piano_roll):
+    str_arr = []
+
+    for note_vec in piano_roll:
+        indices = list(np.nonzero(note_vec)[0])
+        str_arr.append(STR_DELIMITER.join([str(i) for i in indices]))
+
+    return np.asarray(str_arr)
+
+
+def unstringify(str_arr, note_range=128):
+    piano_roll = []
+
+    for note_str in str_arr:
+        if note_str:
+            indices = [int(i) for i in note_str.split(STR_DELIMITER)]
+            note_vec = [1 if i in indices else 0 for i in range(note_range)]
+            piano_roll.append(note_vec)
+        else:
+            piano_roll.append([0 for _ in range(note_range)])
+
+    return np.asarray(piano_roll)
 
 
 def transpose(mid, semitones):
