@@ -14,8 +14,10 @@ import pickle
 import numpy as np
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout
+from keras.layers import Embedding
 from keras.layers import LSTM
 from keras.optimizers import Adam
+from keras.utils import to_categorical
 from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
 
 from midi_parser import MIDIError, filter_midi_files, pretty_midi_to_piano_roll, stringify
@@ -55,22 +57,22 @@ BATCH_SIZE = 50
 MAX_EPOCHS = 200
 
 LSTM_UNITS = 256
-DECODER_LAYERS = 2
 
 SAVE_CHECKPOINTS = False
 SAVE_GRAPH = False
 
+SAVED_DICT_PATH = 'chord_dict.pkl'
+
 # |-------------------------------------|
 
 
-def build_model(): # TODO expand architecture
+def build_model(vocab_size): # TODO expand architecture
     model = Sequential()
-    model.add(LSTM(LSTM_UNITS, input_shape=(SEQUENCE_LENGTH, MIDI_NOTE_RANGE), activation='tanh', return_sequences=True))
-    model.add(Dropout(0.5))
-    model.add(LSTM(LSTM_UNITS, activation='tanh', return_sequences=True))
-    model.add(Dropout(0.5))
-    model.add(Dense(MIDI_NOTE_RANGE))
-    model.add(Activation('softmax'))
+    model.add(Embedding(vocab_size, 50, input_length=SEQUENCE_LENGTH))
+    model.add(LSTM(LSTM_UNITS, return_sequences=True))
+    model.add(LSTM(LSTM_UNITS))
+    model.add(Dense(LSTM_UNITS, activation='relu'))
+    model.add(Dense(vocab_size, activation='softmax'))
 
     return model
 
@@ -80,12 +82,13 @@ def split_xy(data, seq_length):
     y = []
 
     # Pad array with zeros so we get consistent sequence lengths
-    data = list(data) + (np.zeros_like((data[0])) * seq_length)
+    # data = list(data + (np.zeros_like((data[0])) * seq_length)) # TODO Fix?
 
     # Split data into training/labels
     for i in range(0, len(data) - seq_length, seq_length): # TODO change step to measures?
         x.append(data[i:i + seq_length])
-        y.append(data[i + 1: i + seq_length + 1])
+        y.append(data[i + seq_length])
+        # y.append(data[i + 1: i + seq_length + 1])
 
     x = np.asarray(x)
     y = np.asarray(y)
@@ -175,26 +178,29 @@ if __name__ == '__main__':
     midi_data = stringify(midi_data)
 
     # Get unique tokens and create dict mapping each to an integer
-    tokens = np.unique(midi_data, axis=0)
-    num_tokens = len(tokens) # TODO Add 1 to size?
+    unique_tokens = np.unique(midi_data, axis=0)
+    vocab_size = len(unique_tokens) # TODO Add 1 to size?
 
-    chord_dict = dict((chord, i) for i, chord in enumerate(tokens))
+    chord_dict = dict((chord, i) for i, chord in enumerate(unique_tokens))
 
-    print(f'Number of unique tokens: {num_tokens}')
+    if not os.path.exists(SAVED_DICT_PATH):
+        with open(SAVED_DICT_PATH, 'wb') as f:
+            pickle.dump(chord_dict, f)
+
+    print(f'Number of unique tokens: {vocab_size}')
 
     # Finally, create integer sequences for input to embedding layer
     midi_data = np.asarray([chord_dict[chord] for chord in midi_data])
 
     training_data, label_data = split_xy(midi_data, SEQUENCE_LENGTH)
+    label_data = to_categorical(label_data, num_classes=vocab_size)
 
     print(f'Number of sequences: {len(training_data)} ({SEQUENCE_LENGTH} timesteps per sequence)')
     print('-' * 25)
 
     # Build and compile model
-    model = build_model()
+    model = build_model(vocab_size)
     model.compile(loss=LOSS_FUNCTION, optimizer=OPTIMIZER)
-
-    # TODO early stopping, checkpoints
 
     # Callbacks and regularization
     callbacks = []
@@ -212,7 +218,7 @@ if __name__ == '__main__':
 
     # Train model, then save weights
     start_time = time.time()
-    #model.fit(training_data, label_data, batch_size=BATCH_SIZE, epochs=args.max_epochs, callbacks=callbacks) # TODO shuffle?
+    model.fit(training_data, label_data, batch_size=BATCH_SIZE, epochs=args.max_epochs, callbacks=callbacks) # TODO shuffle?
     training_time = time.time() - start_time
 
     #model.save_weights(os.path.join(MODEL_FOLDER, SAVED_WEIGHTS_PATH)) # TODO validation?
