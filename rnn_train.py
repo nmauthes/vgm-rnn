@@ -189,7 +189,7 @@ if __name__ == '__main__':
 
     print(f'Number of unique tokens: {vocab_size}')
 
-    # Finally, create integer sequences for input to embedding layer
+    # Create integer sequences for input to embedding layer
     midi_data = np.asarray([chord_dict[chord] for chord in midi_data])
 
     training_data, label_data = split_xy(midi_data, SEQUENCE_LENGTH)

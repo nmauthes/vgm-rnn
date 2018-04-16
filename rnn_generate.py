@@ -9,12 +9,14 @@ Use a trained model to predict note sequences.
 import os
 import random
 import argparse
+import pickle
 
 import numpy as np
 
 from rnn_train import MIDI_DATA_PATH, SUBDIVISION
-from rnn_train import MODEL_FOLDER, SAVED_WEIGHTS_PATH, SEQUENCE_LENGTH, MIN_MIDI_NOTE, MAX_MIDI_NOTE, build_model
-from midi_parser import piano_roll_to_pretty_midi
+from rnn_train import MODEL_FOLDER, SAVED_WEIGHTS_PATH, SAVED_DICT_PATH, build_model
+from rnn_train import SEQUENCE_LENGTH, MIN_MIDI_NOTE, MAX_MIDI_NOTE, MIDI_NOTE_RANGE
+from midi_parser import stringify, unstringify, piano_roll_to_pretty_midi
 
 
 # |---------- GENERATION PARAMS ----------|
@@ -24,23 +26,31 @@ MIDI_PROGRAM = 82
 GENERATED_MIDI_FOLDER = 'examples'
 GENERATED_FILENAME = 'example.mid'
 
-SAVE_PRIMER_SEQUENCE = False
+SAVE_PRIMER_SEQUENCE = False # TODO check behavior
 PRIMER_FILENAME = 'primer.mid'
 
-NUM_ITERATIONS = 1
+NUM_ITERATIONS = SEQUENCE_LENGTH
 SAMPLING_THRESHOLD = 0.35
 
 # |---------------------------------------|
 
 
-def prob_matrix_to_piano_roll(prob_matrix, threshold=0.2): # TODO make nicer
-    for i, prob in np.ndenumerate(prob_matrix):
-        if prob >= threshold:
-            prob_matrix[i] = 1
-        else:
-            prob_matrix[i] = 0
+def generate_sequence(model, chord_dict, primer, seq_length, num_steps):
+    generated = []
 
-    return prob_matrix
+    seq_in = stringify(primer)
+    seq_in = [chord_dict[chord] for chord in seq_in]
+
+    # Flip keys/values
+    chord_dict = {i: chord for chord, i in chord_dict.items()}
+
+    for i in range(num_steps): # TODO generate seqs
+        pass
+
+    generated = np.asarray(generated)
+    generated = unstringify(generated, MIDI_NOTE_RANGE)
+
+    return generated
 
 
 # |---------- COMMAND LINE ARGS ----------|
@@ -72,10 +82,6 @@ parser.add_argument(
 
 
 if __name__ == '__main__':
-    # TODO load primer data
-    # TODO load model weights
-    # TODO predict outputs
-
     args = parser.parse_args()
 
     if os.path.exists(MIDI_DATA_PATH):
@@ -85,19 +91,35 @@ if __name__ == '__main__':
 
     # Select a random sequence to prime prediction
     primer_index = random.randint(0, int(midi_data.shape[0] / SEQUENCE_LENGTH)) * SEQUENCE_LENGTH
-    primer_sequence = [midi_data[primer_index:primer_index + SEQUENCE_LENGTH, MIN_MIDI_NOTE:MAX_MIDI_NOTE + 1]]
+    primer_sequence = midi_data[primer_index:primer_index + SEQUENCE_LENGTH, MIN_MIDI_NOTE:MAX_MIDI_NOTE + 1]
     primer_sequence = np.asarray(primer_sequence)
 
-    # Use model to predict the next sequence given primer
-    model = build_model()
-    model.load_weights(os.path.join(MODEL_FOLDER, args.saved_weights_path))
+    # Load saved chord dict
+    if os.path.exists(SAVED_DICT_PATH):
+        with open(SAVED_DICT_PATH, 'rb') as f:
+            chord_dict = pickle.load(f)
+    else:
+        raise Exception('Chord dictionary not found!')
 
+    vocab_size = len(chord_dict)
+
+    # Use model to predict the next sequence given primer
+    model = build_model(vocab_size)
+    #model.load_weights(os.path.join(MODEL_FOLDER, args.saved_weights_path))
+
+    # TODO stringify primer
+    # TODO generate seq
+
+    generate_sequence(model, chord_dict, primer_sequence, SEQUENCE_LENGTH, NUM_ITERATIONS)
+
+    '''
     note_probs = model.predict(primer_sequence)[0]
 
     piano_roll = prob_matrix_to_piano_roll(note_probs, threshold=SAMPLING_THRESHOLD)
     generated_mid = piano_roll_to_pretty_midi(piano_roll, subdivision=SUBDIVISION, program=MIDI_PROGRAM,
                                               pitch_offset=MIN_MIDI_NOTE)
     generated_mid.write(os.path.join(GENERATED_MIDI_FOLDER, args.generated_filename))
+    '''
 
     # Save the primer sequence for reference
     if args.save_primer:
