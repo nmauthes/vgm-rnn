@@ -89,7 +89,7 @@ def pretty_midi_to_piano_roll(mid, subdivision=4, max_duration=16, sensitivity=0
                               ignore_drums=True):
 
     '''
-    Encodes a pretty_midi object into an piano-roll matrix with shape (t, 128) where the first axis is the number of
+    Encodes a pretty_midi object as a piano-roll matrix with shape (t, 128) where the first axis is the number of
     timesteps and the second axis is MIDI pitch.
 
     :param mid: The pretty_midi object to be encoded
@@ -164,6 +164,7 @@ def piano_roll_to_pretty_midi(piano_roll, subdivision=4, program=82, tempo=120, 
     :param tempo: The tempo of the pretty_midi object in BPM. Default is 120.
     :param resolution: The resolution of the pretty_midi object (i.e. ticks per quarter note)
     :param pitch_offset: Adds an offset to pitch indices, for use when the MIDI note range has been altered
+
     :return: A pretty_midi object based on the contents of the numpy array
     '''
 

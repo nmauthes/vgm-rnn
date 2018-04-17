@@ -56,7 +56,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     '--generated_filename',
     default=GENERATED_FILENAME,
-    help='Name of the generated MIDI file.'
+    help='Name to give the generated MIDI file(s).'
 )
 parser.add_argument(
     '--num_to_generate',
@@ -65,15 +65,21 @@ parser.add_argument(
     help='Number of MIDI files to generate.'
 )
 parser.add_argument(
-    '--saved_weights_path',
-    default=SAVED_WEIGHTS_PATH,
-    help='The path to the saved weights to use for prediction.'
-)
-parser.add_argument(
     '--save_primer',
     type=bool,
     default=SAVE_PRIMER_SEQUENCE,
     help='Whether to save the primer sequence or not.'
+)
+parser.add_argument(
+    '--sampling_threshold',
+    type=float,
+    default=SAMPLING_THRESHOLD,
+    help='The threshold value to use when sampling from prob matrix.'
+)
+parser.add_argument(
+    '--saved_weights_path',
+    default=SAVED_WEIGHTS_PATH,
+    help='The path to the saved weights to use for prediction.'
 )
 
 # |---------------------------------------|
@@ -105,7 +111,7 @@ if __name__ == '__main__':
         note_probs = model.predict(primer_sequence)[0]
 
         # Convert prob matrix to piano-roll and save
-        piano_roll = prob_matrix_to_piano_roll(note_probs, threshold=SAMPLING_THRESHOLD)
+        piano_roll = prob_matrix_to_piano_roll(note_probs, threshold=args.sampling_threshold)
         generated_mid = piano_roll_to_pretty_midi(piano_roll, subdivision=SUBDIVISION, program=MIDI_PROGRAM,
                                                   pitch_offset=MIN_MIDI_NOTE)
         generated_mid.write(os.path.join(GENERATED_MIDI_FOLDER, args.generated_filename + f'_{i + 1}.mid'))
