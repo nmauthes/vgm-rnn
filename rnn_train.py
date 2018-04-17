@@ -37,7 +37,7 @@ MIN_MIDI_NOTE = 36 # C2
 MAX_MIDI_NOTE = 84 # C6
 MIDI_NOTE_RANGE = MAX_MIDI_NOTE - MIN_MIDI_NOTE + 1
 
-SUBDIVISION = 4 # Number of steps per quarter note (e.g. 4 = 16th notes)
+SUBDIVISION = 2 # Number of steps per quarter note (e.g. 4 = 16th notes)
 NOTES_IN_MEASURE = SUBDIVISION * 4
 MAX_DURATION = NOTES_IN_MEASURE # Corresponds to 1 whole note
 
@@ -60,6 +60,9 @@ LSTM_UNITS = 256
 
 SAVE_CHECKPOINTS = False
 SAVE_GRAPH = False
+
+TRUNCATE_DATA = True
+TRUNCATE_PERCENT = 0.25
 
 SAVED_DICT_PATH = 'chord_dict.pkl'
 
@@ -85,7 +88,7 @@ def split_xy(data, seq_length):
     # data = list(data + (np.zeros_like((data[0])) * seq_length)) # TODO Fix?
 
     # Split data into training/labels
-    for i in range(0, len(data) - seq_length, seq_length): # TODO change step to measures?
+    for i in range(0, len(data) - seq_length, 1): # TODO change step?
         x.append(data[i:i + seq_length])
         y.append(data[i + seq_length])
         # y.append(data[i + 1: i + seq_length + 1])
@@ -94,6 +97,11 @@ def split_xy(data, seq_length):
     y = np.asarray(y)
 
     return x, y
+
+
+def truncate_data(data, percent):
+    assert 0 <= percent <= 1, 'Enter a valid a percent value'
+    return data[:int(len(data) * percent), :]
 
 
 def get_formatted_time(time_in_sec):
@@ -165,6 +173,9 @@ if __name__ == '__main__':
             print('Saving data...')
             np.save(MIDI_DATA_PATH, midi_data) # Serialize array containing training data for future use
 
+    if TRUNCATE_DATA:
+        midi_data = truncate_data(midi_data, TRUNCATE_PERCENT)
+
     print(f'Total timesteps: {len(midi_data)}')
 
     nonzero_count = np.sum(np.any(midi_data, axis=1)) # For determining average polyphony
@@ -183,9 +194,8 @@ if __name__ == '__main__':
 
     chord_dict = dict((chord, i) for i, chord in enumerate(unique_tokens))
 
-    if not os.path.exists(SAVED_DICT_PATH):
-        with open(SAVED_DICT_PATH, 'wb') as f:
-            pickle.dump(chord_dict, f)
+    with open(SAVED_DICT_PATH, 'wb') as f:
+        pickle.dump(chord_dict, f)
 
     print(f'Number of unique tokens: {vocab_size}')
 
@@ -194,6 +204,8 @@ if __name__ == '__main__':
 
     training_data, label_data = split_xy(midi_data, SEQUENCE_LENGTH)
     label_data = to_categorical(label_data, num_classes=vocab_size)
+
+    print(training_data.shape, label_data.shape)
 
     print(f'Number of sequences: {len(training_data)} ({SEQUENCE_LENGTH} timesteps per sequence)')
     print('-' * 25)
@@ -221,7 +233,7 @@ if __name__ == '__main__':
     model.fit(training_data, label_data, batch_size=BATCH_SIZE, epochs=args.max_epochs, callbacks=callbacks) # TODO shuffle?
     training_time = time.time() - start_time
 
-    #model.save_weights(os.path.join(MODEL_FOLDER, SAVED_WEIGHTS_PATH)) # TODO validation?
+    model.save_weights(os.path.join(MODEL_FOLDER, SAVED_WEIGHTS_PATH)) # TODO validation?
 
     print()
     print(f'Training time was {get_formatted_time(training_time)}')
