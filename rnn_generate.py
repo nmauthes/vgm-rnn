@@ -22,18 +22,20 @@ from midi_parser import piano_roll_to_pretty_midi
 MIDI_PROGRAM = 82
 
 GENERATED_MIDI_FOLDER = 'examples'
-GENERATED_FILENAME = 'example.mid'
+GENERATED_FILENAME = 'example'
 
 SAVE_PRIMER_SEQUENCE = False
-PRIMER_FILENAME = 'primer.mid'
+PRIMER_FILENAME = 'primer'
 
-NUM_ITERATIONS = 1
+NUM_TO_GENERATE = 5
 SAMPLING_THRESHOLD = 0.35
 
 # |---------------------------------------|
 
 
-def prob_matrix_to_piano_roll(prob_matrix, threshold=0.2): # TODO make nicer
+def prob_matrix_to_piano_roll(prob_matrix, threshold=0.2):
+    ''' Produce a piano-roll by sampling from a probability matrix. '''
+
     for i, prob in np.ndenumerate(prob_matrix):
         if prob >= threshold:
             prob_matrix[i] = 1
@@ -57,6 +59,12 @@ parser.add_argument(
     help='Name of the generated MIDI file.'
 )
 parser.add_argument(
+    '--num_to_generate',
+    type=int,
+    default=NUM_TO_GENERATE,
+    help='Number of MIDI files to generate.'
+)
+parser.add_argument(
     '--saved_weights_path',
     default=SAVED_WEIGHTS_PATH,
     help='The path to the saved weights to use for prediction.'
@@ -72,10 +80,6 @@ parser.add_argument(
 
 
 if __name__ == '__main__':
-    # TODO load primer data
-    # TODO load model weights
-    # TODO predict outputs
-
     args = parser.parse_args()
 
     if os.path.exists(MIDI_DATA_PATH):
@@ -83,27 +87,33 @@ if __name__ == '__main__':
     else:
         raise Exception('MIDI data not found!')
 
-    # Select a random sequence to prime prediction
-    primer_index = random.randint(0, int(midi_data.shape[0] / SEQUENCE_LENGTH)) * SEQUENCE_LENGTH
-    primer_sequence = [midi_data[primer_index:primer_index + SEQUENCE_LENGTH, MIN_MIDI_NOTE:MAX_MIDI_NOTE + 1]]
-    primer_sequence = np.asarray(primer_sequence)
+    print('-' * 25)
+    print('Generating MIDI files...')
+    print('-' * 25)
 
-    # Use model to predict the next sequence given primer
-    model = build_model()
-    model.load_weights(os.path.join(MODEL_FOLDER, args.saved_weights_path))
+    for i in range(args.num_to_generate):
+        # Select a random sequence to prime prediction
+        primer_index = random.randint(0, int(midi_data.shape[0] / SEQUENCE_LENGTH)) * SEQUENCE_LENGTH
+        primer_sequence = [midi_data[primer_index:primer_index + SEQUENCE_LENGTH, MIN_MIDI_NOTE:MAX_MIDI_NOTE + 1]]
+        primer_sequence = np.asarray(primer_sequence)
 
-    note_probs = model.predict(primer_sequence)[0]
+        # Build the model and load weights
+        model = build_model()
+        model.load_weights(os.path.join(MODEL_FOLDER, args.saved_weights_path))
 
-    piano_roll = prob_matrix_to_piano_roll(note_probs, threshold=SAMPLING_THRESHOLD)
-    generated_mid = piano_roll_to_pretty_midi(piano_roll, subdivision=SUBDIVISION, program=MIDI_PROGRAM,
-                                              pitch_offset=MIN_MIDI_NOTE)
-    generated_mid.write(os.path.join(GENERATED_MIDI_FOLDER, args.generated_filename))
+        # Use model to predict the next sequence given primer
+        note_probs = model.predict(primer_sequence)[0]
 
-    # Save the primer sequence for reference
-    if args.save_primer:
-        primer = piano_roll_to_pretty_midi(primer_sequence[0], subdivision=SUBDIVISION, program=MIDI_PROGRAM,
-                                           pitch_offset=MIN_MIDI_NOTE)
-        primer.write(os.path.join(GENERATED_MIDI_FOLDER, PRIMER_FILENAME))
-        print(f'Primer saved as \'{PRIMER_FILENAME}\'')
+        # Convert prob matrix to piano-roll and save
+        piano_roll = prob_matrix_to_piano_roll(note_probs, threshold=SAMPLING_THRESHOLD)
+        generated_mid = piano_roll_to_pretty_midi(piano_roll, subdivision=SUBDIVISION, program=MIDI_PROGRAM,
+                                                  pitch_offset=MIN_MIDI_NOTE)
+        generated_mid.write(os.path.join(GENERATED_MIDI_FOLDER, args.generated_filename + f'_{i + 1}.mid'))
 
-    print(f'Generated file saved as \'{args.generated_filename}\'')
+        # Save the primer sequence for reference
+        if args.save_primer:
+            primer = piano_roll_to_pretty_midi(primer_sequence[0], subdivision=SUBDIVISION, program=MIDI_PROGRAM,
+                                               pitch_offset=MIN_MIDI_NOTE)
+            primer.write(os.path.join(GENERATED_MIDI_FOLDER, PRIMER_FILENAME + f'_{i + 1}.mid'))
+
+    print(f'Generated file(s) saved in folder \'{GENERATED_MIDI_FOLDER}\'')

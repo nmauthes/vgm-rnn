@@ -30,7 +30,7 @@ def get_midi_files(args):
         # Unless you really enjoy typing...
         pass
 
-    source = requests.get(args.url).text  # TODO try/except
+    source = requests.get(args.url).text
     soup = BeautifulSoup(source, 'lxml')
 
     links = soup.find_all('a', href=True)
@@ -41,7 +41,7 @@ def get_midi_files(args):
 
     print(f'Found {len(links)} MIDI files at {args.url}')
 
-    errors = 0 # TODO Check this?
+    errors = 0
     for i, link in enumerate(links[:args.max_files]):
         print(f'Downloading file {i + 1} of {len(links) if args.max_files >= len(links) else args.max_files}')
 

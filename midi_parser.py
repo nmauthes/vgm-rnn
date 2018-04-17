@@ -41,6 +41,7 @@ def filter_midi_files(data_folder, allowed_time_sigs, allowed_keys, max_time_cha
     :param ignore_filters: If true, all MIDI files in the folder will be converted regardless of filter settings
     :param pickle_result: If true, the resulting list of pretty_midi objects will be saved as a .pkl file
     :param path: The path where the .pkl file will be saved
+
     :return: A list of pretty_midi objects meeting the supplied filter settings
     '''
 
@@ -84,22 +85,23 @@ def filter_midi_files(data_folder, allowed_time_sigs, allowed_keys, max_time_cha
     return filtered_files
 
 
-# TODO rewrite docs
 def pretty_midi_to_piano_roll(mid, subdivision=4, max_duration=16, sensitivity=0.2, transpose_notes=False,
                               ignore_drums=True):
 
     '''
-    Encodes a pretty_midi object into an array with shape (128, t, 2) where the first axis is MIDI pitch, t is
-    the number of timesteps in the song, and the last axis is a pair [v, d] where v is the note's velocity (unless
-    use_velocity is false) and d is its duration in number of timesteps.
+    Encodes a pretty_midi object into an piano-roll matrix with shape (t, 128) where the first axis is the number of
+    timesteps and the second axis is MIDI pitch.
 
     :param mid: The pretty_midi object to be encoded
-    :param subdivision: The resolution at which to sample notes in the song where subdivision is the number of steps
-    per quarter note(e.g. for subdivision=4, 1/subdivision represents a 16th note)
+    :param subdivision: The resolution at which to sample notes in the song, where subdivision is the number of steps
+    per quarter note(e.g. for subdivision=4, (1/subdivision) represents a 16th note)
     :param max_duration: The maximum duration (number of steps) an encoded note can have. Default is 16.
+    :param sensitivity: This is a threshold that allows a window for notes that don't fall exactly on the metrical grid
+    to be included. Specified as a percentage of step length. Useful for encoding e.g. live performances.
     :param transpose_notes: If true, the notes will be transposed to C before encoding (key signature must be present)
     :param ignore_drums: If true, skips all drum instruments (i.e. where is_drum=True) in the song
-    :return: A numpy array of shape (128, t, 2) encoding the notes in the pretty_midi object
+
+    :return: A numpy array of shape (t, 128) encoding the notes in the pretty_midi object
     '''
 
     if subdivision not in ALLOWED_SUBDIVISIONS:
@@ -146,7 +148,7 @@ def pretty_midi_to_piano_roll(mid, subdivision=4, max_duration=16, sensitivity=0
                 if duration > max_duration:
                     duration = max_duration
 
-                piano_roll[note_start, note.pitch] = 1 # TODO ignore duration for now
+                piano_roll[note_start, note.pitch] = 1 # TODO ignoring duration for now
 
     return piano_roll
 
@@ -158,11 +160,10 @@ def piano_roll_to_pretty_midi(piano_roll, subdivision=4, program=82, tempo=120, 
     :param piano_roll: The numpy array to be decoded
     :param subdivision: The number of steps per quarter note. It is important that this has the same value as when
     the array was created in order to make sure note lengths are consistent.
-    :param use_velocity: Whether or not velocity was used to encode the notes in the array. Should be the same as
-    when created.
-    :param program: The MIDI program number to use for playback. Default is 81 (Lead 1 (Square))
+    :param program: The MIDI program number to use for playback. Default is 82 (Lead 1 (Square))
     :param tempo: The tempo of the pretty_midi object in BPM. Default is 120.
     :param resolution: The resolution of the pretty_midi object (i.e. ticks per quarter note)
+    :param pitch_offset: Adds an offset to pitch indices, for use when the MIDI note range has been altered
     :return: A pretty_midi object based on the contents of the numpy array
     '''
 
@@ -224,7 +225,7 @@ def transpose(mid, semitones):
 
 def transpose_to_c(mid):
     '''
-    A special case of transpose that moves all notes to the key of C (major or minor)
+    A special case of transpose that moves all notes to the key of C (major or minor depending on original key)
     Note that in order to know the how many semitones to transpose, the original key (i.e. key_signature_changes[0]
     must be present. Otherwise an exception will be thrown.
 
@@ -244,7 +245,7 @@ def transpose_to_c(mid):
         transpose(mid, semitones)
 
 
-def split_drums(mid):
+def split_for_drums(mid):
     '''
     Splits a pretty_midi into two separate objects, one containing only the drum parts,
     and one containing all the other parts.

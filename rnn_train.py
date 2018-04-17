@@ -9,7 +9,6 @@ Train the RNN on a collection of MIDI files.
 import os
 import time
 import argparse
-import pickle
 
 import numpy as np
 from keras.models import Sequential
@@ -63,12 +62,11 @@ SAVE_GRAPH = False
 # |-------------------------------------|
 
 
-def build_model(): # TODO expand architecture
+def build_model():
+    ''' Build the RNN model to be used during training and generation. '''
+
     model = Sequential()
     model.add(LSTM(LSTM_UNITS, input_shape=(SEQUENCE_LENGTH, MIDI_NOTE_RANGE), activation='tanh', return_sequences=True))
-    model.add(Dropout(0.5))
-    model.add(LSTM(LSTM_UNITS, activation='tanh', return_sequences=True))
-    model.add(Dropout(0.5))
     model.add(Dense(MIDI_NOTE_RANGE))
     model.add(Activation('softmax'))
 
@@ -76,14 +74,13 @@ def build_model(): # TODO expand architecture
 
 
 def split_xy(data, seq_length):
+    ''' Split the dataset into a training set and corresponding set of labels. '''
+
     x = []
     y = []
 
-    # Pad array with zeros so we get consistent sequence lengths
-    data = list(data) + (np.zeros_like((data[0])) * seq_length)
-
     # Split data into training/labels
-    for i in range(0, len(data) - seq_length, seq_length): # TODO change step to measures?
+    for i in range(0, len(data) - seq_length, seq_length):
         x.append(data[i:i + seq_length])
         y.append(data[i + 1: i + seq_length + 1])
 
@@ -94,6 +91,8 @@ def split_xy(data, seq_length):
 
 
 def get_formatted_time(time_in_sec):
+    ''' Utility function for displaying time durations nicely. '''
+
     hours = int(time_in_sec // 3600)
     minutes = int(time_in_sec % 3600 // 60)
     seconds = int(time_in_sec % 60)
@@ -134,11 +133,11 @@ if __name__ == '__main__':
 
     # Load/build midi data
     if os.path.exists(MIDI_DATA_PATH):
-        print('Loading data...')
-        midi_data = np.load(MIDI_DATA_PATH) # Load saved training data if available
+        print('Loading data...') # Load saved dataset if available
+        midi_data = np.load(MIDI_DATA_PATH)
     else:
-        print('Building training set. This might take a while...')
-        midi_data = np.empty(shape=(0, 128)) # Otherwise gather MIDIs and build training set
+        print('Building training set. This might take a while...') # Otherwise gather MIDIs and build dataset
+        midi_data = np.empty(shape=(0, 128))
 
         errors = 0
         for i, folder in enumerate(DATA_FOLDERS):
@@ -160,17 +159,17 @@ if __name__ == '__main__':
                 print(f'{errors} errors occurred')
 
             print('Saving data...')
-            np.save(MIDI_DATA_PATH, midi_data) # Serialize array containing training data for future use
+            np.save(MIDI_DATA_PATH, midi_data) # Serialize array containing dataset for future use
 
     print(f'Total timesteps: {len(midi_data)}')
 
-    # For determining average polyphony
     nonzero_count = np.sum(np.any(midi_data, axis=1))
     print(f'Average polyphony: {round(np.sum(midi_data) / nonzero_count, 2)} notes per chord')
 
     print('-' * 25)
     print('Preparing data for training...')
 
+    # Split data into training set/labels
     training_data, label_data = split_xy(midi_data, SEQUENCE_LENGTH)
 
     # Clamp MIDI note range
@@ -184,9 +183,7 @@ if __name__ == '__main__':
     model = build_model()
     model.compile(loss=LOSS_FUNCTION, optimizer=OPTIMIZER)
 
-    # TODO early stopping, checkpoints
-
-    # Callbacks and regularization
+    # Configure callbacks and regularization
     callbacks = []
 
     if args.save_checkpoints:
@@ -200,12 +197,12 @@ if __name__ == '__main__':
     early_stopping = EarlyStopping(monitor='loss', min_delta=0.01, patience=10)
     callbacks.append(early_stopping)
 
-    # Train model, then save weights
+    # Train model, then save weights when done
     start_time = time.time()
-    model.fit(training_data, label_data, batch_size=BATCH_SIZE, epochs=args.max_epochs, callbacks=callbacks) # TODO shuffle?
+    model.fit(training_data, label_data, batch_size=BATCH_SIZE, epochs=args.max_epochs, callbacks=callbacks)
     training_time = time.time() - start_time
 
-    model.save_weights(os.path.join(MODEL_FOLDER, SAVED_WEIGHTS_PATH)) # TODO validation?
+    model.save_weights(os.path.join(MODEL_FOLDER, SAVED_WEIGHTS_PATH))
 
     print()
     print(f'Training time was {get_formatted_time(training_time)}')
