@@ -54,7 +54,7 @@ def generate_sequence(model, chord_dict, primer, seq_length, num_steps): # TODO 
         next_seq = np.append(seq_in[0, 1:], predicted)
         seq_in = np.asarray([next_seq])
 
-
+    print(generated)
 
     generated = np.asarray(generated)
     generated = unstringify(generated, MIDI_NOTE_RANGE)
@@ -127,7 +127,7 @@ if __name__ == '__main__':
 
     # Save the primer sequence for reference
     if args.save_primer:
-        primer = piano_roll_to_pretty_midi(primer_sequence[0], subdivision=SUBDIVISION, program=MIDI_PROGRAM,
+        primer = piano_roll_to_pretty_midi(primer_sequence[0], subdivision=SUBDIVISION, program=MIDI_PROGRAM, # TODO fix
                                            pitch_offset=MIN_MIDI_NOTE)
         primer.write(os.path.join(GENERATED_MIDI_FOLDER, PRIMER_FILENAME))
         print(f'Primer saved as \'{PRIMER_FILENAME}\'')
