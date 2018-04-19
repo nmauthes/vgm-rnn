@@ -246,7 +246,7 @@ def transpose_to_c(mid):
         transpose(mid, semitones)
 
 
-def split_for_drums(mid):
+def split_drums(mid):
     '''
     Splits a pretty_midi into two separate objects, one containing only the drum parts,
     and one containing all the other parts.

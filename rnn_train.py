@@ -79,10 +79,14 @@ def split_xy(data, seq_length):
     x = []
     y = []
 
+    # Pad data with zeros to get consistent sequence lengths
+    zero_pad = np.zeros((SEQUENCE_LENGTH - data.shape[0] % SEQUENCE_LENGTH, data.shape[1]))
+    data = np.append(data, zero_pad, axis=0)
+
     # Split data into training/labels
     for i in range(0, len(data) - seq_length, seq_length):
         x.append(data[i:i + seq_length])
-        y.append(data[i + 1: i + seq_length + 1])
+        y.append(data[i + seq_length: i + seq_length * 2])
 
     x = np.asarray(x)
     y = np.asarray(y)

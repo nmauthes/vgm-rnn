@@ -22,10 +22,10 @@ from midi_parser import piano_roll_to_pretty_midi
 MIDI_PROGRAM = 82
 
 GENERATED_MIDI_FOLDER = 'examples'
-GENERATED_FILENAME = 'example'
+GENERATED_NAME = 'example'
 
 SAVE_PRIMER_SEQUENCE = False
-PRIMER_FILENAME = 'primer'
+PRIMER_NAME = 'primer'
 
 NUM_TO_GENERATE = 5
 SAMPLING_THRESHOLD = 0.35
@@ -54,8 +54,8 @@ parser = argparse.ArgumentParser(
 )
 
 parser.add_argument(
-    '--generated_filename',
-    default=GENERATED_FILENAME,
+    '--generated_name',
+    default=GENERATED_NAME,
     help='Name to give the generated MIDI file(s).'
 )
 parser.add_argument(
@@ -114,12 +114,12 @@ if __name__ == '__main__':
         piano_roll = prob_matrix_to_piano_roll(note_probs, threshold=args.sampling_threshold)
         generated_mid = piano_roll_to_pretty_midi(piano_roll, subdivision=SUBDIVISION, program=MIDI_PROGRAM,
                                                   pitch_offset=MIN_MIDI_NOTE)
-        generated_mid.write(os.path.join(GENERATED_MIDI_FOLDER, args.generated_filename + f'_{i + 1}.mid'))
+        generated_mid.write(os.path.join(GENERATED_MIDI_FOLDER, args.generated_name + f'_{i + 1}.mid'))
 
         # Save the primer sequence for reference
         if args.save_primer:
             primer = piano_roll_to_pretty_midi(primer_sequence[0], subdivision=SUBDIVISION, program=MIDI_PROGRAM,
                                                pitch_offset=MIN_MIDI_NOTE)
-            primer.write(os.path.join(GENERATED_MIDI_FOLDER, PRIMER_FILENAME + f'_{i + 1}.mid'))
+            primer.write(os.path.join(GENERATED_MIDI_FOLDER, args.generated_name + f'_{i + 1}' + '_' + PRIMER_NAME + '.mid'))
 
     print(f'Generated file(s) saved in folder \'{GENERATED_MIDI_FOLDER}\'')
