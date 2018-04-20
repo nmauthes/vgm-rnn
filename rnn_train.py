@@ -79,9 +79,10 @@ def split_xy(data, seq_length):
     x = []
     y = []
 
-    # Pad data with zeros to get consistent sequence lengths
-    zero_pad = np.zeros((SEQUENCE_LENGTH - data.shape[0] % SEQUENCE_LENGTH, data.shape[1]))
-    data = np.append(data, zero_pad, axis=0)
+    # Pad with zeros if not evenly divided by sequence length
+    if data.shape[0] % seq_length != 0:
+        zero_pad = np.zeros((seq_length - data.shape[0] % seq_length, data.shape[1]))
+        data = np.append(data, zero_pad, axis=0)
 
     # Split data into training/labels
     for i in range(0, len(data) - seq_length, seq_length):
@@ -120,12 +121,12 @@ parser.add_argument(
 )
 parser.add_argument(
     '--save_checkpoints',
-    default=SAVE_CHECKPOINTS,
+    action='store_true',
     help='Whether to save model checkpoints during training.'
 )
 parser.add_argument(
     '--save_graph',
-    default=SAVE_GRAPH,
+    action='store_true',
     help='Whether to save a Tensorboard graph of the model.'
 )
 
@@ -134,6 +135,7 @@ parser.add_argument(
 
 if __name__ == '__main__':
     args = parser.parse_args()
+    print(args.save_graph)
 
     # Load/build midi data
     if os.path.exists(MIDI_DATA_PATH):

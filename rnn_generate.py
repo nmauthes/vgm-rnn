@@ -66,8 +66,7 @@ parser.add_argument(
 )
 parser.add_argument(
     '--save_primer',
-    type=bool,
-    default=SAVE_PRIMER_SEQUENCE,
+    action='store_true',
     help='Whether to save the primer sequence or not.'
 )
 parser.add_argument(
