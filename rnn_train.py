@@ -36,7 +36,6 @@ MIDI_NOTE_RANGE = MAX_MIDI_NOTE - MIN_MIDI_NOTE + 1
 
 SUBDIVISION = 4 # Number of steps per quarter note (e.g. 4 = 16th notes)
 NOTES_IN_MEASURE = SUBDIVISION * 4
-MAX_DURATION = NOTES_IN_MEASURE # Corresponds to 1 whole note
 
 
 # |---------- TRAINING PARAMS ----------|
@@ -45,6 +44,7 @@ MODEL_FOLDER = 'model'
 SAVED_WEIGHTS_PATH = 'rnn_weights.h5'
 
 SEQUENCE_LENGTH = SUBDIVISION * 4 * 4
+STEP_LENGTH = SEQUENCE_LENGTH
 
 LOSS_FUNCTION = 'categorical_crossentropy'
 LEARNING_RATE = 0.01
@@ -54,10 +54,6 @@ BATCH_SIZE = 50
 MAX_EPOCHS = 200
 
 LSTM_UNITS = 256
-DECODER_LAYERS = 2
-
-SAVE_CHECKPOINTS = False
-SAVE_GRAPH = False
 
 # |-------------------------------------|
 
@@ -73,19 +69,14 @@ def build_model():
     return model
 
 
-def split_xy(data, seq_length):
+def split_xy(data, seq_length, step):
     ''' Split the dataset into a training set and corresponding set of labels. '''
 
     x = []
     y = []
 
-    # Pad with zeros if not evenly divided by sequence length
-    if data.shape[0] % seq_length != 0:
-        zero_pad = np.zeros((seq_length - data.shape[0] % seq_length, data.shape[1]))
-        data = np.append(data, zero_pad, axis=0)
-
     # Split data into training/labels
-    for i in range(0, len(data) - seq_length, seq_length):
+    for i in range(0, len(data) - seq_length * 2 + 1, step):
         x.append(data[i:i + seq_length])
         y.append(data[i + seq_length: i + seq_length * 2])
 
@@ -93,6 +84,16 @@ def split_xy(data, seq_length):
     y = np.asarray(y)
 
     return x, y
+
+
+def pad_with_zeros(data, seq_length):
+    ''' Pad the end of a piano-roll matrix with zeros so it divides evenly by sequence length '''
+
+    if data.shape[0] % seq_length != 0:
+        zero_pad = np.zeros((seq_length - data.shape[0] % seq_length, data.shape[1]))
+        return np.append(data, zero_pad, axis=0)
+    else:
+        return data
 
 
 def get_formatted_time(time_in_sec):
@@ -135,7 +136,6 @@ parser.add_argument(
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    print(args.save_graph)
 
     # Load/build midi data
     if os.path.exists(MIDI_DATA_PATH):
@@ -176,7 +176,8 @@ if __name__ == '__main__':
     print('Preparing data for training...')
 
     # Split data into training set/labels
-    training_data, label_data = split_xy(midi_data, SEQUENCE_LENGTH)
+    midi_data = pad_with_zeros(midi_data, SEQUENCE_LENGTH)
+    training_data, label_data = split_xy(midi_data, SEQUENCE_LENGTH, STEP_LENGTH)
 
     # Clamp MIDI note range
     training_data = training_data[:, :, MIN_MIDI_NOTE:MAX_MIDI_NOTE + 1]
@@ -213,3 +214,4 @@ if __name__ == '__main__':
     print()
     print(f'Training time was {get_formatted_time(training_time)}')
     print(f'Weights saved as \'{SAVED_WEIGHTS_PATH}\'')
+

@@ -13,7 +13,8 @@ import argparse
 import numpy as np
 
 from rnn_train import MIDI_DATA_PATH, SUBDIVISION
-from rnn_train import MODEL_FOLDER, SAVED_WEIGHTS_PATH, SEQUENCE_LENGTH, MIN_MIDI_NOTE, MAX_MIDI_NOTE, build_model
+from rnn_train import MODEL_FOLDER, SAVED_WEIGHTS_PATH, SEQUENCE_LENGTH, MIN_MIDI_NOTE, MAX_MIDI_NOTE
+from rnn_train import STEP_LENGTH, pad_with_zeros, split_xy, build_model
 from midi_parser import piano_roll_to_pretty_midi
 
 
@@ -24,10 +25,9 @@ MIDI_PROGRAM = 82
 GENERATED_MIDI_FOLDER = 'examples'
 GENERATED_NAME = 'example'
 
-SAVE_PRIMER_SEQUENCE = False
 PRIMER_NAME = 'primer'
 
-NUM_TO_GENERATE = 5
+NUM_GENERATED = 5
 SAMPLING_THRESHOLD = 0.35
 
 # |---------------------------------------|
@@ -59,9 +59,9 @@ parser.add_argument(
     help='Name to give the generated MIDI file(s).'
 )
 parser.add_argument(
-    '--num_to_generate',
+    '--num_generated',
     type=int,
-    default=NUM_TO_GENERATE,
+    default=NUM_GENERATED,
     help='Number of MIDI files to generate.'
 )
 parser.add_argument(
@@ -92,14 +92,17 @@ if __name__ == '__main__':
     else:
         raise Exception('MIDI data not found!')
 
+    midi_data = pad_with_zeros(midi_data, SEQUENCE_LENGTH)
+    x, _ = split_xy(midi_data, SEQUENCE_LENGTH, STEP_LENGTH)
+
     print('-' * 25)
     print('Generating MIDI files...')
     print('-' * 25)
 
-    for i in range(args.num_to_generate):
+    for i in range(args.num_generated):
         # Select a random sequence to prime prediction
-        primer_index = random.randint(0, int(midi_data.shape[0] / SEQUENCE_LENGTH)) * SEQUENCE_LENGTH
-        primer_sequence = [midi_data[primer_index:primer_index + SEQUENCE_LENGTH, MIN_MIDI_NOTE:MAX_MIDI_NOTE + 1]]
+        primer_index = random.randint(0, x.shape[0])
+        primer_sequence = [x[primer_index][:, MIN_MIDI_NOTE:MAX_MIDI_NOTE + 1]]
         primer_sequence = np.asarray(primer_sequence)
 
         # Build the model and load weights
