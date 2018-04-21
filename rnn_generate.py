@@ -24,10 +24,9 @@ MIDI_PROGRAM = 82
 GENERATED_MIDI_FOLDER = 'examples'
 GENERATED_NAME = 'example'
 
-SAVE_PRIMER_SEQUENCE = False
 PRIMER_NAME = 'primer'
 
-NUM_TO_GENERATE = 5
+NUM_GENERATED = 5
 SAMPLING_THRESHOLD = 0.35
 
 # |---------------------------------------|
@@ -59,9 +58,9 @@ parser.add_argument(
     help='Name to give the generated MIDI file(s).'
 )
 parser.add_argument(
-    '--num_to_generate',
+    '--num_generated',
     type=int,
-    default=NUM_TO_GENERATE,
+    default=NUM_GENERATED,
     help='Number of MIDI files to generate.'
 )
 parser.add_argument(
@@ -96,7 +95,7 @@ if __name__ == '__main__':
     print('Generating MIDI files...')
     print('-' * 25)
 
-    for i in range(args.num_to_generate):
+    for i in range(args.num_generated):
         # Select a random sequence to prime prediction
         primer_index = random.randint(0, int(midi_data.shape[0] / SEQUENCE_LENGTH)) * SEQUENCE_LENGTH
         primer_sequence = [midi_data[primer_index:primer_index + SEQUENCE_LENGTH, MIN_MIDI_NOTE:MAX_MIDI_NOTE + 1]]
