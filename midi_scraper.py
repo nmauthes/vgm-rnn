@@ -77,7 +77,7 @@ parser.add_argument(
     '--max_files',
     type=int,
     default=10000,
-    help='The number of files to download from a given URL. Default is 10,000.'
+    help='The maximum number of files to download from a given URL. Default is 10,000.'
 )
 
 # |---------------------------------------|
