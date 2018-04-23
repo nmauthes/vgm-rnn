@@ -55,9 +55,6 @@ MAX_EPOCHS = 200
 
 LSTM_UNITS = 256
 
-SAVE_CHECKPOINTS = False
-SAVE_GRAPH = False
-
 # |-------------------------------------|
 
 
