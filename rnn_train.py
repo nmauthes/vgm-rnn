@@ -26,7 +26,7 @@ from midi_parser import MIDIError, filter_midi_files, pretty_midi_to_piano_roll,
 # |---------- MIDI PARAMS ----------|
 
 DATA_FOLDERS = ['nes_data']
-MIDI_DATA_PATH = 'training_data.npy'
+MIDI_DATA_PATH = 'training_data.npy' # TODO change
 
 ALLOWED_TIME_SIGS = ['4/4']
 ALLOWED_KEYS = ['Db Major', 'D Major', 'Eb Major', 'E Major', 'F Major', 'Gb Major', 'G Major',
@@ -37,7 +37,7 @@ MIN_MIDI_NOTE = 36 # C2
 MAX_MIDI_NOTE = 84 # C6
 MIDI_NOTE_RANGE = MAX_MIDI_NOTE - MIN_MIDI_NOTE + 1
 
-SUBDIVISION = 2 # Number of steps per quarter note (e.g. 4 = 16th notes)
+SUBDIVISION = 4 # Number of steps per quarter note (e.g. 4 = 16th notes)
 NOTES_IN_MEASURE = SUBDIVISION * 4
 MAX_DURATION = NOTES_IN_MEASURE # Corresponds to 1 whole note
 
@@ -61,8 +61,8 @@ LSTM_UNITS = 256
 SAVE_CHECKPOINTS = False
 SAVE_GRAPH = False
 
-TRUNCATE_DATA = True
-TRUNCATE_PERCENT = 0.25
+TRUNCATE_DATA = True # TODO change
+TRUNCATE_PERCENT = 0.2
 
 SAVED_DICT_PATH = 'chord_dict.pkl'
 
@@ -71,11 +71,11 @@ SAVED_DICT_PATH = 'chord_dict.pkl'
 
 def build_model(vocab_size): # TODO expand architecture
     model = Sequential()
-    model.add(Embedding(vocab_size, 50, input_length=SEQUENCE_LENGTH))
-    model.add(LSTM(LSTM_UNITS, return_sequences=True))
+    model.add(LSTM(LSTM_UNITS, input_shape=(SEQUENCE_LENGTH, 1), return_sequences=True))
     model.add(LSTM(LSTM_UNITS))
-    model.add(Dense(LSTM_UNITS, activation='relu'))
-    model.add(Dense(vocab_size, activation='softmax'))
+    model.add(Dense(LSTM_UNITS))
+    model.add(Dense(vocab_size))
+    model.add(Activation('softmax'))
 
     return model
 
@@ -205,6 +205,11 @@ if __name__ == '__main__':
     training_data, label_data = split_xy(midi_data, SEQUENCE_LENGTH)
     label_data = to_categorical(label_data, num_classes=vocab_size)
 
+    training_data = np.reshape(training_data, (training_data.shape[0], training_data.shape[1], 1))
+    training_data = training_data / float(vocab_size)
+
+    #label_data = np.reshape(label_data, (label_data.shape[0], label_data.shape[1], 1))
+
     print(training_data.shape, label_data.shape)
 
     print(f'Number of sequences: {len(training_data)} ({SEQUENCE_LENGTH} timesteps per sequence)')
@@ -225,7 +230,7 @@ if __name__ == '__main__':
         tb = TensorBoard(log_dir=MODEL_FOLDER)
         callbacks.append(tb)
 
-    early_stopping = EarlyStopping(monitor='loss', min_delta=0.01, patience=10)
+    early_stopping = EarlyStopping(monitor='loss', patience=5)
     callbacks.append(early_stopping)
 
     # Train model, then save weights

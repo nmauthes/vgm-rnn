@@ -29,7 +29,7 @@ GENERATED_FILENAME = 'example.mid'
 SAVE_PRIMER_SEQUENCE = False # TODO check behavior
 PRIMER_FILENAME = 'primer.mid'
 
-NUM_ITERATIONS = SEQUENCE_LENGTH
+NUM_ITERATIONS = 64
 SAMPLING_THRESHOLD = 0.35
 
 # |---------------------------------------|
@@ -47,7 +47,9 @@ def generate_sequence(model, chord_dict, primer, seq_length, num_steps): # TODO 
     chord_dict = {i: chord for chord, i in chord_dict.items()}
 
     for _ in range(num_steps):
-        predicted = model.predict_classes(seq_in)
+        _seq_in = np.reshape(seq_in, (seq_in.shape[0], seq_in.shape[1], 1))
+        _seq_in = _seq_in / float(vocab_size)
+        predicted = model.predict_classes(_seq_in)
 
         generated.append(chord_dict[predicted[0]])
 
@@ -105,6 +107,8 @@ if __name__ == '__main__':
     primer_index = random.randint(0, int(midi_data.shape[0] / SEQUENCE_LENGTH)) * SEQUENCE_LENGTH
     primer_sequence = midi_data[primer_index:primer_index + SEQUENCE_LENGTH, MIN_MIDI_NOTE:MAX_MIDI_NOTE + 1]
     primer_sequence = np.asarray(primer_sequence)
+
+    print(primer_sequence.shape)
 
     # Load saved chord dict
     if os.path.exists(SAVED_DICT_PATH):
