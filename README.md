@@ -17,4 +17,8 @@ Note that the weights provided with the repo will be overwritten unless you rena
 
 ### Generating new MIDI files
 
-You can use the trained weights provided with this repo or your own weights to generated new MIDI sequences.
+You can use the trained weights provided with this repo or your own weights to generate new MIDI sequences. To generate new MIDI sequences using the model:
+
+```
+python rnn_generate.py
+```
