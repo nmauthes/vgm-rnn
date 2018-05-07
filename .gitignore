@@ -48,12 +48,12 @@ tmtagsHistory
 # Project folders & files #
 # #################
 /data
-*.mid
 *.pkl
 *.txt
 *.npy
 *.h5
 *.png
+!rnn_weights.h5
 !requirements.txt
 
 # Dev-specific settings #
