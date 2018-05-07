@@ -15,7 +15,7 @@ python rnn_train.py
 
 ### Generating new MIDI files
 
-You can use the trained weights to generate new MIDI sequences using the model. After training the model, call:
+You can use the trained weights to generate new MIDI sequences using the model. After training the model, run this command:
 
 ```
 python rnn_generate.py
