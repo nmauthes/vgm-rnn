@@ -1,7 +1,6 @@
 # VGM-RNN
 A recurrent neural network for generating video game music.
 
-
 Read the paper: http://scholarworks.sjsu.edu/etd_projects/595/
 
 Take the survey: https://goo.gl/forms/78UI3FTFjHOx5Oq82
