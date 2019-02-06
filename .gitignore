@@ -53,6 +53,7 @@ tmtagsHistory
 *.npy
 *.h5
 *.png
+!vgm_rnn.png
 !rnn_weights.h5
 !requirements.txt
 
