@@ -2,7 +2,7 @@
 
 A recurrent neural network for generating video game music.
 
-![VGM-RNN Logo](vgm_rnn.png | width=100)
+<img src="vgm_rnn.pn">
 
 Read the paper: http://scholarworks.sjsu.edu/etd_projects/595/
 
